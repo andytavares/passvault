@@ -14,7 +14,7 @@ import (
 // ReadSecret returns the exact bytes of one pass entry.
 type ReadSecret func(ctx context.Context, passName string) ([]byte, error)
 
-// Warning names one entry Render skipped and why.
+// Warning names one entry RenderScript skipped and why.
 type Warning struct {
 	Pass   string
 	Reason string
@@ -29,8 +29,8 @@ func Quote(value []byte) string {
 
 // RenderScript returns the zsh script: exports for global secrets, then one wrapper
 // function per command. A read error or a NUL byte skips the entry with a
-// warning; Render never fails. Command-scope secrets are not read here.
-func Render(ctx context.Context, m mapping.Mapping, read ReadSecret) (string, []Warning) {
+// warning; RenderScript never fails. Command-scope secrets are not read here.
+func RenderScript(ctx context.Context, m mapping.Mapping, read ReadSecret) (string, []Warning) {
 	var lines []string
 	var warnings []Warning
 	for _, secret := range m.Secrets {
@@ -72,7 +72,7 @@ type RunRequest struct {
 }
 
 // RunEnv returns KEY=VALUE pairs for the named pass entries, or for every
-// entry with Env set when Names is empty. Unlike Render, a read error or an
+// entry with Env set when Names is empty. Unlike RenderScript, a read error or an
 // unknown name is an error.
 func RunEnv(ctx context.Context, m mapping.Mapping, request RunRequest) ([]string, error) {
 	secrets, err := selectSecrets(m, request.Names)

@@ -41,7 +41,7 @@ func TestRenderQuoteInjection(t *testing.T) {
 	m := mapping.Mapping{Secrets: []mapping.Secret{
 		{Pass: "test", Env: "PV_TEST", Scope: mapping.ScopeGlobal},
 	}}
-	script, warnings := Render(context.Background(), m, readValues(map[string][]byte{"test": []byte(value)}))
+	script, warnings := RenderScript(context.Background(), m, readValues(map[string][]byte{"test": []byte(value)}))
 	if len(warnings) != 0 {
 		t.Fatalf("warnings: %v", warnings)
 	}
@@ -59,7 +59,7 @@ func TestRenderQuoteNewlines(t *testing.T) {
 	m := mapping.Mapping{Secrets: []mapping.Secret{
 		{Pass: "test", Env: "PV_TEST", Scope: mapping.ScopeGlobal},
 	}}
-	script, _ := Render(context.Background(), m, readValues(map[string][]byte{"test": []byte(value)}))
+	script, _ := RenderScript(context.Background(), m, readValues(map[string][]byte{"test": []byte(value)}))
 	out := runZsh(t, script+`; printf %s "$PV_TEST"`)
 	if out != value {
 		t.Fatalf("got %q, want %q", out, value)
@@ -77,7 +77,7 @@ func TestRenderReadErrorWarnsAndSkips(t *testing.T) {
 		}
 		return []byte("ok"), nil
 	}
-	script, warnings := Render(context.Background(), m, read)
+	script, warnings := RenderScript(context.Background(), m, read)
 	if len(warnings) != 1 || warnings[0].Pass != "broken" {
 		t.Fatalf("warnings: %v", warnings)
 	}
@@ -95,7 +95,7 @@ func TestRenderNULWarnsAndSkips(t *testing.T) {
 		{Pass: "fine", Env: "PV_FINE", Scope: mapping.ScopeGlobal},
 	}}
 	read := readValues(map[string][]byte{"nul": []byte("a\x00b"), "fine": []byte("ok")})
-	script, warnings := Render(context.Background(), m, read)
+	script, warnings := RenderScript(context.Background(), m, read)
 	if len(warnings) != 1 || warnings[0].Pass != "nul" {
 		t.Fatalf("warnings: %v", warnings)
 	}
@@ -112,7 +112,7 @@ func TestRenderCommandScope(t *testing.T) {
 		t.Fatalf("read called for command-scope entry %s", name)
 		return nil, nil
 	}
-	script, warnings := Render(context.Background(), m, read)
+	script, warnings := RenderScript(context.Background(), m, read)
 	if len(warnings) != 0 {
 		t.Fatalf("warnings: %v", warnings)
 	}
@@ -138,7 +138,7 @@ func TestRenderCommandScopeMerges(t *testing.T) {
 		{Pass: "a", Env: "A", Scope: mapping.ScopeCommand, Commands: []string{"gh"}},
 		{Pass: "b", Env: "B", Scope: mapping.ScopeCommand, Commands: []string{"gh"}},
 	}}
-	script, _ := Render(context.Background(), m, readValues(nil))
+	script, _ := RenderScript(context.Background(), m, readValues(nil))
 	want := "gh() { A=\"$(command pass show 'a')\" B=\"$(command pass show 'b')\" command gh \"$@\"; }"
 	if strings.Count(script, "gh()") != 1 || !strings.Contains(script, want) {
 		t.Fatalf("script:\n%s", script)
@@ -155,14 +155,14 @@ func TestRenderOrderingAndEmpty(t *testing.T) {
 		{Pass: "noenv", Scope: mapping.ScopeGlobal},
 	}}
 	read := readValues(map[string][]byte{"z": []byte("1"), "a": []byte("2")})
-	script, _ := Render(context.Background(), m, read)
+	script, _ := RenderScript(context.Background(), m, read)
 	want := "export ZED='1'\nexport AYE='2'\n" +
 		"alpha() { C2=\"$(command pass show 'c2')\" command alpha \"$@\"; }\n" +
 		"zed() { C1=\"$(command pass show 'c1')\" command zed \"$@\"; }\n"
 	if script != want {
 		t.Fatalf("got %q, want %q", script, want)
 	}
-	empty, _ := Render(context.Background(), mapping.Mapping{}, readValues(nil))
+	empty, _ := RenderScript(context.Background(), mapping.Mapping{}, readValues(nil))
 	if empty != "" {
 		t.Fatalf("empty mapping: got %q", empty)
 	}
