@@ -210,3 +210,12 @@ func TestRunEnv(t *testing.T) {
 		t.Fatal("read error: want error")
 	}
 }
+
+func TestRunEnvRejectsNULByteNamingTheEntry(t *testing.T) {
+	m := mapping.Mapping{Version: 1, Secrets: []mapping.Secret{{Pass: "bin", Ref: "op://v/i/f", Env: "PV_BIN", Scope: mapping.ScopeGlobal}}}
+	read := func(context.Context, string) ([]byte, error) { return []byte("va\x00lue"), nil }
+	_, err := RunEnv(context.Background(), m, RunRequest{Read: read})
+	if err == nil || !strings.Contains(err.Error(), "bin") || !strings.Contains(err.Error(), "NUL") {
+		t.Fatalf("err = %v, want one naming the entry and NUL", err)
+	}
+}

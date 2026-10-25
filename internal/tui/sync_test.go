@@ -54,8 +54,8 @@ func TestConflictSkipKeepsPass(t *testing.T) {
 	if !ok {
 		t.Fatalf("sync returned %T", report)
 	}
-	if finished.report.Skipped != 1 {
-		t.Errorf("skipped = %d, want 1", finished.report.Skipped)
+	if finished.skipped != 1 {
+		t.Errorf("skipped = %d, want 1", finished.skipped)
 	}
 }
 

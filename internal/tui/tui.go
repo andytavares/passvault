@@ -255,6 +255,11 @@ func (m Model) updateKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) updateGlobalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 	switch msg.String() {
 	case "q", "ctrl+c":
+		if m.syncing {
+			// Quitting would orphan the sync goroutine, which blocks on the
+			// conflict answer channel forever.
+			return m, nil, true
+		}
 		m.clearReveal()
 		return m, tea.Quit, true
 	case "tab":

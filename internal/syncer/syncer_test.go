@@ -428,3 +428,22 @@ func TestCheckClassifiesActions(t *testing.T) {
 		}
 	}
 }
+
+func TestSyncTwiceInOneSecondGivesEachRunItsOwnTag(t *testing.T) {
+	env := newEnv(t)
+	ctx := context.Background()
+	env.SetOp(t, "op://Private/Item/a", "one")
+	env.SetOp(t, "op://Private/Item/b", "two")
+	s, _ := newSyncer(t, env, nil)
+	first, err := s.Sync(ctx, mappingOf(secret("a", "op://Private/Item/a")), syncer.SyncOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := s.Sync(ctx, mappingOf(secret("b", "op://Private/Item/b")), syncer.SyncOptions{})
+	if err != nil {
+		t.Fatalf("second sync in the same second must not fail: %v", err)
+	}
+	if first.Tag != "sync-20261025T120000" || second.Tag != "sync-20261025T120000-1" {
+		t.Fatalf("tags = %q, %q", first.Tag, second.Tag)
+	}
+}

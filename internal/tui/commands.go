@@ -31,7 +31,7 @@ type (
 		value string
 	}
 	tickMsg         struct{ at time.Time }
-	syncDoneMsg     struct{ report syncer.Report }
+	syncDoneMsg     struct{ added, unchanged, skipped int }
 	checkDoneMsg    struct{ rows []syncer.StatusRow }
 	rollbackDoneMsg struct{ hash string }
 	mutatedMsg      struct{ note string }

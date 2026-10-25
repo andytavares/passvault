@@ -111,7 +111,7 @@ func syncCmd(m *Model) tea.Cmd {
 				return errMsg{err}
 			}
 		}
-		return syncDoneMsg{report}
+		return syncDoneMsg{added: report.Added + report.Updated, unchanged: report.Unchanged, skipped: report.Skipped}
 	}
 }
 
@@ -186,9 +186,8 @@ func (m Model) requestReveal() tea.Cmd {
 // applySyncDone records the outcome and stops the spinner.
 func (m Model) applySyncDone(msg syncDoneMsg) (tea.Model, tea.Cmd) {
 	m.syncing = false
-	m.syncLines = reportLines(msg.report)
 	m.notice = fmt.Sprintf("synced: %d changed · %d unchanged · %d skipped",
-		msg.report.Added+msg.report.Updated, msg.report.Unchanged, msg.report.Skipped)
+		msg.added, msg.unchanged, msg.skipped)
 	return m, nil
 }
 
@@ -196,30 +195,6 @@ func (m Model) applyCheckDone(msg checkDoneMsg) (tea.Model, tea.Cmd) {
 	m.rows = msg.rows
 	m.notice = "check complete"
 	return m, nil
-}
-
-// reportLines renders one line per entry, like the sync mockup.
-func reportLines(report syncer.Report) []string {
-	var lines []string
-	for _, entry := range report.Entries {
-		lines = append(lines, fmt.Sprintf("%s %-26s %s", actionMark(entry.Action), entry.Secret.Pass, entry.Action))
-	}
-	return lines
-}
-
-func actionMark(action syncer.Action) string {
-	switch action {
-	case syncer.ActionAdd:
-		return "+"
-	case syncer.ActionUnchanged:
-		return "="
-	case syncer.ActionDiffers:
-		return "~"
-	case syncer.ActionOrphan:
-		return "?"
-	default:
-		return "!"
-	}
 }
 
 // syncView renders progress lines and the conflict modal when open.

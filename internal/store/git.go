@@ -75,7 +75,7 @@ const historyFormat = "%H%x1f%h%x1f%s%x1f%aI%x1f%D%x1e"
 // History lists commits, newest first. With name set, only commits touching
 // name.gpg; with limit > 0, at most limit commits.
 func (s *Store) History(ctx context.Context, name string, limit int) ([]Revision, error) {
-	args := []string{"log", "--format=" + historyFormat, "--name-only"}
+	args := []string{"log", "--decorate=short", "--format=" + historyFormat, "--name-only"}
 	if limit > 0 {
 		args = append(args, "-n", strconv.Itoa(limit))
 	}

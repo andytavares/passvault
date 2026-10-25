@@ -85,6 +85,9 @@ func RunEnv(ctx context.Context, m mapping.Mapping, request RunRequest) ([]strin
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", secret.Pass, err)
 		}
+		if strings.IndexByte(string(value), 0) >= 0 {
+			return nil, fmt.Errorf("%s: value contains NUL byte", secret.Pass)
+		}
 		pairs = append(pairs, secret.Env+"="+string(value))
 	}
 	return pairs, nil

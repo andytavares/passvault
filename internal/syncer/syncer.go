@@ -243,11 +243,17 @@ func (s *Syncer) applyEntry(ctx context.Context, run run, index int) error {
 // Added, an overwrite counts Updated; both end up as ActionAdd so the
 // report no longer shows them as differing.
 func (s *Syncer) applyInsert(ctx context.Context, run run, entry *Entry) error {
-	added := entry.Action == ActionAdd
+	overwriting := entry.Action == ActionDiffers
 	if !run.opts.DryRun {
 		value, err := s.Source.Read(ctx, entry.Secret.Ref)
 		if err != nil {
-			entry.Action, entry.Err, run.report.Failed = ActionFailed, err, run.report.Failed+1
+			entry.Action, entry.Err = ActionFailed, err
+			run.report.Failed++
+			if overwriting {
+				run.report.Updated++
+			} else {
+				run.report.Added++
+			}
 			return nil
 		}
 		defer clear(value)
@@ -256,10 +262,10 @@ func (s *Syncer) applyInsert(ctx context.Context, run run, entry *Entry) error {
 		}
 	}
 	entry.Action = ActionAdd
-	if added {
-		run.report.Added++
-	} else {
+	if overwriting {
 		run.report.Updated++
+	} else {
+		run.report.Added++
 	}
 	s.markSynced(entry, true)
 	return nil
@@ -273,7 +279,7 @@ func (s *Syncer) applyConflict(ctx context.Context, run run, entry *Entry) error
 	if s.Decider == nil {
 		return fmt.Errorf("entry %s differs and there is no decider", entry.Secret.Pass)
 	}
-	decision, err := s.Decider.Decide(ctx, s.conflictOf(entry))
+	decision, err := s.Decider.Decide(ctx, s.conflictOf(ctx, entry))
 	if err != nil {
 		return err
 	}
@@ -289,17 +295,17 @@ func (s *Syncer) applyConflict(ctx context.Context, run run, entry *Entry) error
 }
 
 // conflictOf builds the Conflict for entry; Reveal re-reads both values.
-func (s *Syncer) conflictOf(entry *Entry) Conflict {
+func (s *Syncer) conflictOf(ctx context.Context, entry *Entry) Conflict {
 	return Conflict{
 		Secret:    entry.Secret,
 		SourceLen: entry.SourceLen,
 		VaultLen:  entry.VaultLen,
 		Reveal: func() ([]byte, []byte, error) {
-			source, err := s.Source.Read(context.Background(), entry.Secret.Ref)
+			source, err := s.Source.Read(ctx, entry.Secret.Ref)
 			if err != nil {
 				return nil, nil, err
 			}
-			vault, err := s.Vault.Show(context.Background(), entry.Secret.Pass)
+			vault, err := s.Vault.Show(ctx, entry.Secret.Pass)
 			if err != nil {
 				clear(source)
 				return nil, nil, err
@@ -345,8 +351,8 @@ func (s *Syncer) finish(ctx context.Context, report *Report, dryRun bool) error 
 	if dryRun || !s.Vault.IsGitRepo() {
 		return nil
 	}
-	tag := "sync-" + s.Now().UTC().Format("20060102T150405")
-	if err := s.Vault.Tag(ctx, tag); err != nil {
+	tag, err := s.tagUnique(ctx)
+	if err != nil {
 		return err
 	}
 	report.Tag, s.State.LastTag = tag, tag
@@ -360,6 +366,23 @@ func (s *Syncer) finish(ctx context.Context, report *Report, dryRun bool) error 
 		}
 	}
 	return nil
+}
+
+// tagUnique tags the store with a timestamp name; two runs inside one second
+// collide, so it retries with a numeric suffix until git accepts the tag.
+func (s *Syncer) tagUnique(ctx context.Context) (string, error) {
+	base := "sync-" + s.Now().UTC().Format("20060102T150405")
+	tag := base
+	for suffix := 1; ; suffix++ {
+		err := s.Vault.Tag(ctx, tag)
+		if err == nil {
+			return tag, nil
+		}
+		if suffix > 9 {
+			return "", err
+		}
+		tag = fmt.Sprintf("%s-%d", base, suffix)
+	}
 }
 
 func containsName(names []string, name string) bool {
