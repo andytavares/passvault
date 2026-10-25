@@ -20,6 +20,7 @@ func NewRoot() *cobra.Command {
 	application := newApp()
 	registerDataCommands(root, application)
 	registerSetupCommands(root, application)
+	registerTUICommand(root, application)
 	return root
 }
 
