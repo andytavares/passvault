@@ -17,6 +17,7 @@ func NewRoot() *cobra.Command {
 		SilenceErrors: true,
 	}
 	root.AddCommand(newVersionCommand())
+	registerDataCommands(root, newApp())
 	return root
 }
 
