@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/execx"
@@ -63,8 +64,29 @@ func (e *Env) makeDirs(t *testing.T) {
 	writeExecutable(t, filepath.Join(e.FakeBin, "brew"), fakeBrew)
 }
 
+var (
+	goDirsOnce sync.Once
+	goDirs     [2]string // GOMODCACHE, GOCACHE of the real user
+)
+
+// pinGoDirs keeps `go build` inside tests using the real module and build
+// caches, because HOME points at an empty temp directory.
+func pinGoDirs(t *testing.T) {
+	goDirsOnce.Do(func() {
+		out, err := exec.Command("go", "env", "GOMODCACHE", "GOCACHE").Output()
+		if err != nil {
+			return
+		}
+		copy(goDirs[:], strings.Split(strings.TrimSpace(string(out)), "\n"))
+	})
+	t.Setenv("GOMODCACHE", goDirs[0])
+	t.Setenv("GOCACHE", goDirs[1])
+	t.Setenv("GOFLAGS", "-mod=readonly")
+}
+
 func (e *Env) setEnv(t *testing.T) {
 	root := e.Root
+	pinGoDirs(t)
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", filepath.Join(root, ".config"))
 	t.Setenv("XDG_STATE_HOME", filepath.Join(root, ".local", "state"))
