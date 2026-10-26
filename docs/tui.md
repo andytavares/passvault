@@ -89,7 +89,11 @@ Lists every `[[secret]]` with its reference, and any validation errors in red.
 
 Add from 1Password:
 
-1. Pick an item (`↑`/`↓`, `enter`). The list comes from `op item list`.
+1. Pick an item (`↑`/`↓`, `enter`). The list comes from `op item list` and
+   scrolls to the cursor. Type to search titles (case-insensitive, `backspace`
+   deletes); `←`/`→` steps the vault filter through all vaults and each vault.
+   While the picker is open, letters, `q` and `←`/`→` go to the search and filter,
+   not to the global keys.
 2. Pick a field. Labels and references only; values are never loaded.
 3. Edit the pass name (defaults to the item title in lower-case-with-dashes), `enter`.
 4. Type an env name (upper-cased for you) or leave it empty, `enter`.
