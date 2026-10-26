@@ -1,0 +1,489 @@
+<title>pvault Design</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column (~70ch) with wide terminal renderings that may break out to 920px. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1b2230;
+  --muted: #5b6577;
+  --line: #d9dee7;
+  --accent: #0e6b74;
+  --accent-soft: #e2f0f1;
+  --warn: #9a5b00;
+  --warn-soft: #fbefdc;
+  --bad: #a3262a;
+  --good: #1f7a3d;
+  --term-bg: #121821;
+  --term-fg: #d6dde8;
+  --term-dim: #7f8ba0;
+  --term-green: #7ccf8f;
+  --term-amber: #e9b45a;
+  --term-cyan: #6cc7d0;
+  --term-red: #ef7f7f;
+  --term-line: #2a3442;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151c; --surface: #171d26; --fg: #e3e8f0; --muted: #98a3b5; --line: #2a3340;
+    --accent: #5fc0c8; --accent-soft: #15302f; --warn: #e9b45a; --warn-soft: #33270f;
+    --bad: #ef7f7f; --good: #7ccf8f;
+    --term-bg: #0b0f15; --term-line: #232c38;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151c; --surface: #171d26; --fg: #e3e8f0; --muted: #98a3b5; --line: #2a3340;
+  --accent: #5fc0c8; --accent-soft: #15302f; --warn: #e9b45a; --warn-soft: #33270f;
+  --bad: #ef7f7f; --good: #7ccf8f;
+  --term-bg: #0b0f15; --term-line: #232c38;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 920px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 8px; }
+main > * { min-width: 0; }
+.prose, h2, h3, p, ul, ol, table.kv { max-width: 72ch; }
+h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.1; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-family: var(--font-display); font-size: 1.55rem; margin: 40px 0 4px; padding-top: 20px; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-size: 1.05rem; font-weight: 600; margin: 20px 0 0; }
+p, ul, ol { margin: 6px 0; }
+li { margin: 3px 0; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 0.92rem; display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { font-size: 1.12rem; color: var(--fg); }
+.decisions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; max-width: none; }
+.decisions li { margin: 0; font-size: 0.85rem; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 12px; }
+.decisions b { color: var(--accent); font-weight: 600; }
+.tablewrap { overflow-x: auto; margin: 8px 0; }
+table { border-collapse: collapse; font-size: 0.92rem; width: 100%; }
+th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+td code { white-space: nowrap; }
+.chosen { color: var(--good); font-weight: 600; }
+.term {
+  background: var(--term-bg); color: var(--term-fg); border: 1px solid var(--term-line);
+  border-radius: 8px; margin: 10px 0; overflow: hidden;
+}
+.term .bar { font-family: var(--font-mono); font-size: 0.72rem; color: var(--term-dim); padding: 6px 12px; border-bottom: 1px solid var(--term-line); display: flex; justify-content: space-between; gap: 12px; }
+.term pre { margin: 0; padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.5; }
+.g { color: var(--term-green); } .a { color: var(--term-amber); } .c { color: var(--term-cyan); } .r { color: var(--term-red); } .d { color: var(--term-dim); } .b { font-weight: 600; color: #ffffff; }
+pre.code { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.5; margin: 8px 0; }
+.note { border-left: 3px solid var(--warn); background: var(--warn-soft); padding: 8px 14px; border-radius: 0 6px 6px 0; max-width: 72ch; }
+.unv { font-family: var(--font-mono); font-size: 0.72rem; color: var(--warn); font-weight: 600; }
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; }
+.diagram pre.mermaid { margin: 0; background: transparent; }
+.cap { font-size: 0.85rem; color: var(--muted); margin-top: -2px; }
+.ex { font-family: var(--font-mono); font-size: 0.7rem; color: var(--term-amber); }
+@media (max-width: 520px) { body { font-size: 15px; } .term pre { font-size: 0.72rem; } }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">Design document · atavares-klaviyo/pass-vault · 2026-10-25</div>
+  <h1>pvault: 1Password to pass, on demand</h1>
+  <div class="meta"><span>Owner: Andrew Tavares</span><span>Status: draft for review</span><span>Target: macOS + Homebrew</span></div>
+  <ul class="decisions">
+    <li><b>Stack</b> Go + Bubble Tea</li>
+    <li><b>Sync source</b> mapping file in <code>~/.config</code></li>
+    <li><b>Conflicts</b> ask per entry</li>
+    <li><b>Env</b> global export by default</li>
+    <li><b>Store</b> local git, rollback in CLI + TUI</li>
+    <li><b>Uninstall</b> only what it installed</li>
+  </ul>
+</header>
+
+<h2>Context and problem</h2>
+<p>Shell config loads secrets from <code>pass</code> at startup. Today <code>~/.zshrc:155</code> has <code>export PAGERDUTY_API_KEY=$(pass pagerduty-api-key)</code> and the store holds one entry (<code>ls ~/.password-store</code> shows <code>pagerduty-api-key.gpg</code>). 1Password holds the real copies, but the copy into pass is manual and has no history. Each new Mac also needs the same manual setup: install pass, gnupg and the 1Password CLI, create a GPG key, init the store, wire up zsh. There is no clean way to upgrade that setup or to remove it. <b>pvault</b> is one Go binary that does setup, upgrade and uninstall, syncs chosen 1Password fields into pass on request, keeps a rollback history, and has a TUI to view and manage the vault.</p>
+
+<h2>Goals and non-goals</h2>
+<h3>Goals</h3>
+<ul>
+  <li>One command installs everything a fresh Mac needs and is safe to run again (idempotent).</li>
+  <li><code>pvault sync</code> copies every entry listed in the mapping file from 1Password to pass, and asks before it overwrites a pass value that differs.</li>
+  <li>Every sync can be rolled back from the CLI and from the TUI.</li>
+  <li><code>pvault upgrade</code> updates the tool in place and runs config migrations.</li>
+  <li><code>pvault uninstall</code> removes only what pvault installed. With <code>--purge-vault</code> it also removes the vault.</li>
+  <li>A TUI to browse entries, see sync state and history, sync, roll back, and add, edit and delete entries.</li>
+  <li>Secrets never appear in argv, logs, state files or terminal output unless you ask to reveal them.</li>
+</ul>
+<h3>Non-goals</h3>
+<ul>
+  <li>Two-way sync (pass to 1Password).</li>
+  <li>Linux, Windows or headless machines. Other Macs only, with the 1Password desktop app.</li>
+  <li>A git remote for the store. 1Password is the backup.</li>
+  <li>Sharing one GPG key across machines. Each Mac gets its own key.</li>
+  <li>Scheduled or background sync. Sync runs only when you ask for it.</li>
+</ul>
+
+<h2>Current state</h2>
+<p>The repo is empty (<code>git log</code> → <code>does not have any commits yet</code>). This machine:</p>
+<div class="tablewrap"><table>
+  <tr><th>Item</th><th>Value</th><th>Evidence</th></tr>
+  <tr><td>pass</td><td>1.7.4, Homebrew</td><td><code>brew list --versions pass</code></td></tr>
+  <tr><td>gnupg</td><td>2.5.24, <code>use-keyboxd</code></td><td><code>gpg --version</code>, <code>~/.gnupg/common.conf</code></td></tr>
+  <tr><td>1Password CLI</td><td>2.41.0 cask (2.41.1 available), not signed in</td><td><code>brew list --cask --versions 1password-cli</code>, <code>op whoami</code></td></tr>
+  <tr><td>pinentry</td><td>generic <code>/opt/homebrew/opt/pinentry/bin/pinentry</code>; pinentry-mac not installed</td><td><code>gpgconf --list-components</code></td></tr>
+  <tr><td>gpg-agent.conf</td><td>absent</td><td><code>cat ~/.gnupg/gpg-agent.conf</code></td></tr>
+  <tr><td>GPG key</td><td>one ed25519 key, created 2026-10-22</td><td><code>gpg --list-secret-keys</code></td></tr>
+  <tr><td>Store</td><td><code>~/.password-store</code>, 1 entry, not a git repo</td><td><code>git -C ~/.password-store log</code> → not a git repository</td></tr>
+  <tr><td>Go</td><td>1.27.3 darwin/arm64</td><td><code>go version</code></td></tr>
+  <tr><td>Reverse deps</td><td>gnupg is needed by pass</td><td><code>brew uses --installed gnupg</code> → <code>pass</code></td></tr>
+</table></div>
+
+<h2>Options considered</h2>
+<h3>A. How sync picks items</h3>
+<div class="tablewrap"><table>
+  <tr><th>Option</th><th>For</th><th>Against</th></tr>
+  <tr><td class="chosen">Mapping file in <code>~/.config/pvault</code></td><td>Explicit names, env vars and scopes. Can be reviewed. Holds no secrets. Each machine can have its own.</td><td>You write it by hand. Mitigation: <code>pvault mapping add</code> and a TUI picker.</td></tr>
+  <tr><td>1Password tag</td><td>No config</td><td>Pass names come from item titles. No place for the env var or field choice.</td></tr>
+  <tr><td>Dedicated vault</td><td>Simple</td><td>Same naming problem. You must move items.</td></tr>
+</table></div>
+<h3>B. Where install logic lives</h3>
+<div class="tablewrap"><table>
+  <tr><th>Option</th><th>For</th><th>Against</th></tr>
+  <tr><td>All in <code>install.sh</code></td><td>No build step</td><td>Hard to test. Upgrade, uninstall and TUI logic split across two languages.</td></tr>
+  <tr><td class="chosen">Thin <code>install.sh</code> + <code>pvault setup</code></td><td>All steps in Go with unit tests. The same code runs for install, upgrade and uninstall.</td><td>The bootstrap needs Go. It installs Go with brew if it is missing and records it.</td></tr>
+</table></div>
+<h3>C. How secrets reach the shell</h3>
+<div class="tablewrap"><table>
+  <tr><th>Option</th><th>For</th><th>Against</th></tr>
+  <tr><td class="chosen">Global export at shell start (default, per your choice)</td><td>Same behaviour as today. Every tool sees the variable.</td><td>The shell decrypts every global entry at startup. Every child process the shell starts inherits the values (checked: <code>PV_DEMO=inherited zsh -c 'python3 -c …'</code> prints <code>inherited</code>).</td></tr>
+  <tr><td>Per-command wrapper (<code>scope = "command"</code>, opt-in)</td><td>The secret exists only in the process that needs it.</td><td>You must list the commands that need the secret.</td></tr>
+  <tr><td>Skip pass, use <code>op run</code></td><td>No local copy</td><td>Needs the app unlocked and Touch ID in every terminal (10-min idle, 12-h hard limit, <a href="https://www.1password.dev/cli/app-integration-security/">1Password docs</a>).</td></tr>
+</table></div>
+<h3>D. How sync detects change</h3>
+<p><b>Chosen: compare live.</b> Sync reads both sides and compares bytes in memory. <b>Rejected: store hashes in a state file.</b> An offline attacker can brute-force hashes of short secrets, and the hashes still need a live read to confirm.</p>
+
+<h2>Decision</h2>
+<p>A single Go binary <code>pvault</code> (cobra CLI + Bubble Tea TUI). A thin <code>install.sh</code> bootstraps Go, builds the binary and runs <code>pvault setup</code>. A per-machine mapping file lists the 1Password references to sync. Sync is one-way and asks before each overwrite. The store is a local git repo, and rollback adds a new forward commit. Entries export globally by default, and you can set <code>scope = "command"</code> for any entry. A manifest records each change that setup makes, and uninstall reverts only what the manifest lists.</p>
+
+<h2>Design</h2>
+
+<h3>Components</h3>
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+  subgraph Mac
+    I[install.sh] -->|go build| B[pvault binary<br/>~/.local/bin/pvault]
+    B --> CLI[CLI commands]
+    B --> TUI[TUI]
+    CLI & TUI --> SY[syncer]
+    SY -->|op read -n| OP[(1Password<br/>op CLI + app)]
+    SY -->|stdin: pass insert -m -f| PS[(pass store<br/>~/.password-store + git)]
+    CLI & TUI --> MP[mapping.toml<br/>~/.config/pvault]
+    CLI --> ST[manifest.json + state.json<br/>~/.local/state/pvault]
+    Z[~/.zshrc managed block] -->|eval pvault env| B
+  end
+</pre></div>
+
+<h3>Files on disk</h3>
+<div class="tablewrap"><table>
+  <tr><th>Path</th><th>Owner</th><th>Content</th></tr>
+  <tr><td><code>~/.local/bin/pvault</code></td><td>pvault</td><td>Binary. Version is set with <code>-ldflags "-X main.version=$(git describe)"</code>.</td></tr>
+  <tr><td><code>~/.config/pvault/mapping.toml</code></td><td>You</td><td>Entries to sync. No secrets. Setup creates it from an example only if it is missing.</td></tr>
+  <tr><td><code>~/.local/state/pvault/manifest.json</code></td><td>pvault</td><td>Source clone path, schema version, the steps it applied, brew packages it installed, the GPG fingerprint if it created the key, file backups.</td></tr>
+  <tr><td><code>~/.local/state/pvault/state.json</code></td><td>pvault</td><td>For each managed pass path: last sync time and sync tag. No values or hashes.</td></tr>
+  <tr><td><code>~/.zshrc</code>, <code>~/.gnupg/gpg-agent.conf</code></td><td>Shared</td><td>pvault writes only between <code># &gt;&gt;&gt; pvault &gt;&gt;&gt;</code> and <code># &lt;&lt;&lt; pvault &lt;&lt;&lt;</code>. It makes a timestamped backup before the first edit.</td></tr>
+</table></div>
+
+<h3>Mapping file</h3>
+<p>The file is per machine and is not stored in the repo. <code>pvault mapping init</code> writes a commented example. <code>docs/mapping.md</code> explains how to write one. Field references use the <code>op://vault/item/[section/]field</code> syntax. Names may contain only letters, digits, <code>-</code>, <code>_</code>, <code>.</code> and spaces. For any other character, use the item ID (<a href="https://www.1password.dev/cli/secret-reference-syntax/">secret reference syntax</a>). The fastest way to get a reference is <b>Copy Secret Reference</b> in the 1Password app.</p>
+<pre class="code">version = 1
+# op_account = "my.1password.com"   # only if you have more than one account
+
+[[secret]]
+pass = "pagerduty-api-key"                     # path in ~/.password-store, no .gpg
+ref  = "op://Private/PagerDuty/credential"      # Copy Secret Reference in 1Password
+env  = "PAGERDUTY_API_KEY"                      # optional
+# scope = "global"                              # global (default) | command | none
+
+[[secret]]
+pass     = "work/github-token"
+ref      = "op://Employee/GitHub PAT/token"
+env      = "GITHUB_TOKEN"
+scope    = "command"
+commands = ["gh"]                               # wrapper: decrypt only when gh runs</pre>
+<p>Validation rejects these: duplicate <code>pass</code> or <code>env</code> values, a <code>ref</code> that does not start with <code>op://</code>, an <code>env</code> that is not <code>[A-Z_][A-Z0-9_]*</code>, <code>scope = "command"</code> without <code>commands</code>, unknown keys, and a <code>version</code> newer than the binary supports.</p>
+
+<h3>Command surface</h3>
+<div class="tablewrap"><table>
+  <tr><th>Command</th><th>Does</th></tr>
+  <tr><td><code>pvault</code></td><td>Opens the TUI when stdout is a terminal. Otherwise prints help.</td></tr>
+  <tr><td><code>pvault setup [--dry-run]</code></td><td>Runs the idempotent install steps (below). <code>install.sh</code> and <code>upgrade</code> call it.</td></tr>
+  <tr><td><code>pvault upgrade [--no-tools]</code></td><td>Runs <code>git pull --ff-only</code> in the source clone, rebuilds, swaps the binary atomically (write to a temp file, then rename), and runs <code>setup</code> with migrations. It also runs <code>brew upgrade</code> for the toolset (pass, gnupg, pinentry-mac, 1password-cli) and shows the version changes first. <code>--no-tools</code> upgrades only pvault.</td></tr>
+  <tr><td><code>pvault uninstall [--purge-vault] [--purge-key] [--keep-config] [--dry-run]</code></td><td>Reverses the manifest. Shows the plan and asks you to confirm.</td></tr>
+  <tr><td><code>pvault sync [NAME…] [--prune] [--skip-conflicts] [--dry-run]</code></td><td>Syncs from 1Password to pass. Asks before every overwrite, one entry at a time. <code>--skip-conflicts</code> is for scripts: it never overwrites and exits 1 if any entry differs.</td></tr>
+  <tr><td><code>pvault check</code></td><td>Compares live values and writes nothing. Exits 1 if any entry differs or is missing.</td></tr>
+  <tr><td><code>pvault status</code></td><td>Lists mapped, unmanaged and orphan entries with the last sync time. Needs no decrypt.</td></tr>
+  <tr><td><code>pvault env --zsh</code></td><td>Prints shell-quoted <code>export</code> lines and wrapper functions. The zshrc block evaluates its output.</td></tr>
+  <tr><td><code>pvault run [--entry NAME…] -- CMD</code></td><td>Runs CMD with the named entries in its environment only.</td></tr>
+  <tr><td><code>pvault history [NAME]</code> / <code>pvault rollback REV [--entry NAME]</code></td><td>Shows sync tags and commits. Restores the store, or one entry, to REV with a new commit.</td></tr>
+  <tr><td><code>pvault mapping init|path|validate|add</code></td><td><code>add</code> opens a 1Password item picker and appends an entry.</td></tr>
+  <tr><td><code>pvault doctor</code></td><td>Checks tool versions, op sign-in, pinentry, gpg-agent, store git, mapping validity, and <code>pass</code> calls in <code>~/.zshrc</code> outside the managed block.</td></tr>
+</table></div>
+
+<h3>Sync sequence</h3>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  participant U as You
+  participant P as pvault sync
+  participant O as op CLI
+  participant G as pass + gpg
+  participant R as store git
+  P->>R: git status clean? record HEAD
+  loop each mapping entry
+    P->>O: op read -n "op://…"
+    Note over O: Touch ID once per terminal
+    P->>G: pass show path (if exists)
+    alt pass entry missing
+      P->>G: stdin → pass insert -m -f path
+    else bytes equal
+      P-->>U: = unchanged
+    else differs
+      P->>U: prompt o / s / v / q
+      U-->>P: o
+      P->>G: stdin → pass insert -m -f path
+    end
+  end
+  P->>R: git tag sync-YYYYMMDDTHHMMSS (if any change)
+  P->>P: write state.json, report orphans
+</pre></div>
+<ul>
+  <li><b>Secret handling.</b> Values move only through pipes: <code>op read -n</code> stdout into memory, then into the stdin of <code>pass insert -m -f</code>. Argv holds only paths and references. The runner records every argv in tests so we can assert this.</li>
+  <li><b>Exact bytes.</b> <code>op read -n</code> adds no newline. <code>pass insert -m</code> stores stdin as given. The compare uses the exact bytes.</li>
+  <li><b>Orphans.</b> An orphan is a path in <code>state.json</code> that is no longer in the mapping. Sync reports orphans and deletes them only with <code>--prune</code>, after it asks you. pvault never touches a pass entry that you made by hand.</li>
+  <li><b>Dirty store.</b> If the store has uncommitted changes, sync stops and tells you how to commit or discard them.</li>
+  <li><b>Errors.</b> If 1Password cannot read one entry, sync marks that entry as failed and continues with the others. It exits 2 if any entry failed.</li>
+</ul>
+
+<h3>Shell environment</h3>
+<pre class="code"># &gt;&gt;&gt; pvault &gt;&gt;&gt;  managed by pvault; edit ~/.config/pvault/mapping.toml instead
+[[ -x ~/.local/bin/pvault ]] &amp;&amp; eval "$(~/.local/bin/pvault env --zsh)"
+# &lt;&lt;&lt; pvault &lt;&lt;&lt;</pre>
+<ul>
+  <li><code>pvault env</code> wraps each value in single quotes and escapes embedded quotes as <code>'\''</code>. A value such as <code>a'b$(touch x)</code> is set literally and runs nothing.</li>
+  <li>For <code>scope = "command"</code> it prints <code>gh() { GITHUB_TOKEN="$(pass show work/github-token)" command gh "$@"; }</code>.</li>
+  <li>If an entry fails to decrypt, <code>pvault env</code> prints a warning to stderr and skips it. A failure never stops the shell from starting.</li>
+  <li>Setup never changes lines outside the block. <code>doctor</code> and <code>setup</code> report lines like <code>~/.zshrc:155</code> so you can move them into the mapping.</li>
+</ul>
+<p class="note">Global export keeps today's behaviour: each new terminal decrypts every global entry. When the gpg-agent cache has expired (defaults: 600 s idle, 7200 s maximum, <a href="https://www.gnupg.org/documentation/manuals/gnupg/Agent-Options.html">GnuPG agent options</a>), pinentry-mac asks for your passphrase when the terminal opens. The startup time for N decrypts was <b>not measured</b>.</p>
+
+<h3>Setup steps (idempotent, recorded in the manifest)</h3>
+<ol>
+  <li>Stop if the OS is not macOS. Require Homebrew.</li>
+  <li><code>brew install pass gnupg pinentry-mac</code> and <code>brew install --cask 1password-cli</code>, each only if missing. Record only the packages that pvault installed.</li>
+  <li>gpg-agent.conf managed block: <code>pinentry-program /opt/homebrew/bin/pinentry-mac</code>, then <code>gpgconf --kill gpg-agent</code>. Skip this step if a <code>pinentry-program</code> line exists outside the block.</li>
+  <li>If no secret key exists, offer to create one: <code>gpg --quick-generate-key "Name &lt;email&gt;" future-default default 2y</code>. Pinentry asks for the passphrase. Record the fingerprint (<a href="https://www.gnupg.org/documentation/manuals/gnupg/OpenPGP-Key-Management.html">GnuPG key management</a>).</li>
+  <li>If the store does not exist, run <code>pass init &lt;fpr&gt;</code>. If it exists, check that its <code>.gpg-id</code> has a matching secret key.</li>
+  <li>If the store is not a git repo, run <code>pass git init</code>. This makes a first commit of the existing entries.</li>
+  <li>Write <code>mapping.toml</code> from the example if it is missing. Never overwrite it.</li>
+  <li>Add the <code>~/.zshrc</code> block (back up the file first). Report <code>pass</code> calls outside the block.</li>
+  <li>Check that the 1Password app integration works. If it does not, print the steps: Settings → Developer → Integrate with 1Password CLI (<a href="https://www.1password.dev/cli/app-integration/">docs</a>).</li>
+</ol>
+<p><b>Upgrade and migrations.</b> The manifest stores <code>schema_version</code>. Migrations live in <code>internal/setup/migrations.go</code> as an ordered list. Setup runs the ones above the stored version, then saves the new version. A migration that rewrites <code>mapping.toml</code> first saves a <code>.bak</code> copy.</p>
+
+<h3>Uninstall</h3>
+<ol>
+  <li>Show the plan: every manifest item, plus items that will stay and why.</li>
+  <li>Remove the managed blocks from <code>~/.zshrc</code> and <code>gpg-agent.conf</code>.</li>
+  <li><code>brew uninstall</code> each package in the manifest, in reverse order. Skip a package if <code>brew uses --installed</code> lists a package that pvault did not install.</li>
+  <li>Remove <code>~/.config/pvault</code> (keep it with <code>--keep-config</code>), <code>~/.local/state/pvault</code>, and the binary.</li>
+  <li><code>--purge-vault</code>: you must type the store path. Then pvault removes <code>~/.password-store</code>.</li>
+  <li><code>--purge-key</code>: deletes the GPG key only if the manifest fingerprint shows that pvault created it. pvault never deletes a key that existed before setup.</li>
+</ol>
+
+<h3>Rollback</h3>
+<p><code>pvault rollback REV</code> runs <code>git restore --source=REV --staged --worktree -- .</code> in the store and commits <code>pvault rollback to REV</code>. The default no-overlay mode removes entries that were added after REV (<a href="https://git-scm.com/docs/git-restore">git-restore</a>). History is kept, so you can undo the rollback too. <code>--entry NAME</code> restores only <code>NAME.gpg</code>. If <code>.gpg-id</code> differs between REV and HEAD, rollback stops, because the old files may be encrypted to a key you no longer have. It does not run <code>git reset --hard</code>.</p>
+
+<h3>TUI</h3>
+<p>Built with <code>charm.land/bubbletea/v2</code>, <code>charm.land/bubbles/v2</code> (list, viewport, textinput, help) and <code>charm.land/lipgloss/v2</code>. Views: <b>Vault</b> (tree + detail), <b>Sync</b> (live progress with a conflict prompt), <b>History</b> (sync tags and commits with rollback), <b>Mapping</b> (entries, <code>$EDITOR</code> through <code>tea.ExecProcess</code>, and an "add from 1Password" picker). The detail pane shows a masked value. Reveal shows it for 10 s. Copy uses <code>pass show -c</code>, which clears the clipboard after 45 s. Status values come from <code>state.json</code> and need no decrypt. <code>c</code> runs a live check.</p>
+
+<h3>Renderings</h3>
+<p class="cap">Mockups. Entries other than <code>pagerduty-api-key</code> are <span class="ex">example data</span>.</p>
+
+<div class="term"><div class="bar"><span>TUI · Vault view</span><span class="ex">example data</span></div><pre>
+ <span class="b">pvault</span> <span class="d">─ ~/.password-store ─</span> 3 mapped · 1 unmanaged · 1 orphan              <span class="g">op ✓</span>  <span class="g">gpg-agent ✓</span>
+<span class="d">┌ Entries ─────────────────────────────┐┌ pagerduty-api-key ──────────────────────────────┐</span>
+<span class="d">│</span> <span class="c">▸ pagerduty-api-key</span>     <span class="g">● synced 2h</span>  <span class="d">││</span> 1Password  op://Private/PagerDuty/credential       <span class="d">│</span>
+<span class="d">│</span>   work/                              <span class="d">││</span> Env        PAGERDUTY_API_KEY  <span class="d">global</span>             <span class="d">│</span>
+<span class="d">│</span>     github-token        <span class="g">● synced 2h</span>  <span class="d">││</span> Value      •••••••••••••••• <span class="d">(32 chars)</span>            <span class="d">│</span>
+<span class="d">│</span>     aws-access-key      <span class="a">◐ never</span>      <span class="d">││</span> Last sync  2026-10-25 11:02  sync-20261025T110204  <span class="d">│</span>
+<span class="d">│</span>   old/jira-token        <span class="r">✕ orphan</span>     <span class="d">││</span>                                                    <span class="d">│</span>
+<span class="d">│</span>   notes/wifi            <span class="d">○ unmanaged</span>  <span class="d">││</span> <span class="d">History</span>                                            <span class="d">│</span>
+<span class="d">│</span>                                      <span class="d">││</span>   <span class="a">4c1e9a2</span> 10-25 11:02 pvault sync: update          <span class="d">│</span>
+<span class="d">│</span>                                      <span class="d">││</span>   <span class="a">9f8e7d6</span> 10-20 09:14 pvault sync: add             <span class="d">│</span>
+<span class="d">└──────────────────────────────────────┘└────────────────────────────────────────────────────┘</span>
+ <span class="d">enter</span> open  <span class="d">s</span> sync  <span class="d">c</span> check  <span class="d">r</span> reveal  <span class="d">y</span> copy  <span class="d">n</span> new  <span class="d">e</span> edit  <span class="d">d</span> delete  <span class="d">h</span> history  <span class="d">m</span> mapping  <span class="d">?</span> help  <span class="d">q</span> quit
+</pre></div>
+
+<div class="term"><div class="bar"><span>TUI · Sync view, conflict prompt</span><span class="ex">example data</span></div><pre>
+ <span class="b">Sync</span> <span class="d">─ 4 entries ─</span> 1Password → pass
+   <span class="g">=</span> pagerduty-api-key        unchanged
+   <span class="g">+</span> work/aws-access-key      added
+   <span class="a">~</span> work/github-token        <span class="a">differs</span>
+       <span class="d">┌ Conflict 1 of 1 · work/github-token ────────────────────────┐</span>
+       <span class="d">│</span> 1Password  updated 2026-10-24 16:40   40 chars              <span class="d">│</span>
+       <span class="d">│</span> pass       committed 2026-10-20 09:14  36 chars             <span class="d">│</span>
+       <span class="d">│</span>                                                              <span class="d">│</span>
+       <span class="d">│</span> <span class="c">[o]</span> overwrite pass   <span class="c">[s]</span> skip   <span class="c">[v]</span> reveal both for 10 s     <span class="d">│</span>
+       <span class="d">│</span> <span class="c">[q]</span> stop sync                                          <span class="d">│</span>
+       <span class="d">└──────────────────────────────────────────────────────────────┘</span>
+   <span class="d">·</span> old/jira-token           waiting
+</pre></div>
+
+<div class="term"><div class="bar"><span>CLI · pvault sync</span><span class="ex">example data</span></div><pre>
+<span class="d">$</span> pvault sync
+Reading 4 entries from 1Password <span class="d">(Touch ID may prompt)</span>
+  <span class="g">=</span> pagerduty-api-key        unchanged
+  <span class="g">+</span> work/aws-access-key      added
+  <span class="a">~</span> work/github-token        differs  <span class="d">1Password 40 chars, 2026-10-24 · pass 36 chars, 2026-10-20</span>
+    Overwrite pass entry? <span class="c">[o]</span>verwrite <span class="c">[s]</span>kip <span class="c">[v]</span>reveal <span class="c">[q]</span>uit: o
+  <span class="a">~</span> work/github-token        updated
+  <span class="r">?</span> old/jira-token           orphan, no longer in mapping · run <span class="c">pvault sync --prune</span> to delete
+Tagged <span class="b">sync-20261025T130512</span> · 2 changed · 1 unchanged · 1 orphan
+Run <span class="c">exec zsh</span> to load the new values in this terminal
+</pre></div>
+
+<div class="term"><div class="bar"><span>CLI · ./install.sh on this Mac (expected)</span><span></span></div><pre>
+<span class="d">$</span> ./install.sh
+Building pvault v0.1.0 with go1.27.3 → ~/.local/bin/pvault
+<span class="b">pvault setup</span>
+  <span class="g">✓</span> pass 1.7.4                       present, not managed
+  <span class="g">✓</span> gnupg 2.5.24                     present, not managed
+  <span class="g">✓</span> 1password-cli 2.41.0             present, not managed
+  <span class="c">+</span> pinentry-mac                     installed <span class="d">(managed)</span>
+  <span class="c">+</span> ~/.gnupg/gpg-agent.conf          pinentry-program set <span class="d">(managed block)</span>
+  <span class="g">✓</span> GPG key ed25519, 2026-10-22      present, not managed
+  <span class="g">✓</span> ~/.password-store                .gpg-id matches a secret key
+  <span class="c">+</span> pass git init                    1 entry committed
+  <span class="c">+</span> ~/.config/pvault/mapping.toml    created from example
+  <span class="c">+</span> ~/.zshrc                         managed block added <span class="d">(backup ~/.zshrc.pvault-20261025T130000)</span>
+  <span class="a">!</span> ~/.zshrc:155 runs pass outside the managed block
+    Add PAGERDUTY_API_KEY to mapping.toml, run <span class="c">pvault sync</span>, then delete line 155
+  <span class="a">!</span> 1Password CLI is not signed in. Enable Settings → Developer → Integrate with 1Password CLI
+Manifest: ~/.local/state/pvault/manifest.json
+</pre></div>
+
+<div class="term"><div class="bar"><span>CLI · pvault uninstall --purge-vault</span><span></span></div><pre>
+<span class="d">$</span> pvault uninstall --purge-vault
+Will remove
+  <span class="r">-</span> ~/.zshrc managed block · ~/.gnupg/gpg-agent.conf managed block
+  <span class="r">-</span> brew: pinentry-mac
+  <span class="r">-</span> ~/.config/pvault · ~/.local/state/pvault · ~/.local/bin/pvault
+  <span class="r">-</span> ~/.password-store <span class="d">(1 entry, 3 commits)</span>
+Will keep
+  <span class="g">·</span> pass, gnupg, 1password-cli <span class="d">present before setup</span>
+  <span class="g">·</span> GPG key ed25519 2026-10-22 <span class="d">not created by pvault</span>
+Type the store path to confirm vault deletion: <span class="c">~/.password-store</span>
+</pre></div>
+
+<div class="term"><div class="bar"><span>CLI · history and rollback</span><span class="ex">example data</span></div><pre>
+<span class="d">$</span> pvault history
+  <span class="a">sync-20261025T130512</span>  2 changed   work/aws-access-key +, work/github-token ~
+  <span class="a">sync-20261020T091402</span>  2 changed   pagerduty-api-key +, work/github-token +
+<span class="d">$</span> pvault rollback sync-20261020T091402
+Restores 2 entries, removes 1 (work/aws-access-key). Continue? [y/N] y
+Committed <span class="b">pvault rollback to sync-20261020T091402</span> · undo with <span class="c">pvault rollback HEAD~1</span>
+</pre></div>
+
+<h3>Repository layout</h3>
+<pre class="code">install.sh                    # bootstrap: brew? go? → go build → pvault setup
+Makefile                      # make check
+go.mod, go.sum                # exact versions, see below
+cmd/pvault/main.go
+internal/cli/                 # cobra commands: root, setup, upgrade, uninstall, sync, check, status, env, run, history, rollback, mapping, doctor
+internal/mapping/             # TOML load + validate
+internal/opcli/               # op read -n, op item get (metadata only)
+internal/store/               # pass show/insert/rm/ls, git log/tag/restore
+internal/syncer/              # plan + apply; Decider interface (CLI prompt, TUI modal, flags)
+internal/shellenv/            # export/wrapper rendering, managed-block editor
+internal/setup/               # steps, manifest, migrations, uninstall
+internal/execx/               # Runner interface over os/exec; recording fake for tests
+internal/tui/                 # app, vault, sync, history, mapping models
+docs/mapping.md               # how to write mapping.toml
+scripts/check-dep-age.sh      # fails if any module in go.sum is younger than 14 days
+testdata/fakebin/             # fake op and brew used by tests</pre>
+
+<h3>Dependencies (exact pins, every one ≥ 14 days old on 2026-10-25)</h3>
+<div class="tablewrap"><table>
+  <tr><th>Module</th><th>Version</th><th>Published</th></tr>
+  <tr><td><code>charm.land/bubbletea/v2</code></td><td>v2.1.0</td><td>2026-10-08</td></tr>
+  <tr><td><code>charm.land/bubbles/v2</code></td><td>v2.2.1</td><td>2026-08-24</td></tr>
+  <tr><td><code>charm.land/lipgloss/v2</code></td><td>v2.0.6</td><td>2026-08-11</td></tr>
+  <tr><td><code>github.com/spf13/cobra</code></td><td>v1.10.2</td><td>2025-12-03</td></tr>
+  <tr><td><code>github.com/BurntSushi/toml</code></td><td>v1.6.0</td><td>2025-12-18</td></tr>
+</table></div>
+<p class="cap">Source: <code>go list -m -json &lt;module&gt;@&lt;version&gt;</code>, field <code>Time</code>. Go has no minimum-release-age setting. <code>scripts/check-dep-age.sh</code> runs <code>go list -m -json all</code> and fails if any module, direct or transitive, is younger than 14 days. <code>go.sum</code> is committed.</p>
+
+<h3>Sequence of changes</h3>
+<p>Each step is one commit on a feature branch, with a failing test first.</p>
+<ol>
+  <li>Skeleton: <code>go.mod</code>, cobra root, <code>version</code>, <code>Makefile</code> check target, <code>check-dep-age.sh</code>.</li>
+  <li><code>internal/mapping</code> + <code>mapping init|path|validate</code> + <code>docs/mapping.md</code>.</li>
+  <li><code>internal/execx</code>, <code>internal/store</code>, <code>internal/opcli</code> with the temp GNUPGHOME test harness.</li>
+  <li><code>internal/syncer</code> + <code>sync</code>, <code>check</code>, <code>status</code>.</li>
+  <li>Sync tags + <code>history</code>, <code>rollback</code>.</li>
+  <li><code>internal/shellenv</code> + <code>env</code>, <code>run</code>.</li>
+  <li><code>internal/setup</code> + <code>install.sh</code>, <code>setup</code>, <code>upgrade</code>, <code>uninstall</code>, <code>doctor</code>.</li>
+  <li><code>internal/tui</code>: vault, sync, history and mapping views, and <code>mapping add</code> picker.</li>
+</ol>
+
+<h2>Testing and verification</h2>
+<p><b>Gate:</b> <code>make check</code>, exit 0, which runs <code>test -z "$(gofmt -l .)"</code>, <code>go vet ./...</code>, <code>go test -race ./...</code>, <code>scripts/check-dep-age.sh</code> and <code>shellcheck install.sh</code>. shellcheck is not installed here (<code>command -v shellcheck</code> is empty), so it is a dev dependency to add.</p>
+<p><b>Harness.</b> Tests run real <code>pass</code> and <code>gpg</code> against a temp <code>GNUPGHOME</code> and <code>PASSWORD_STORE_DIR</code>. TestMain creates a key with no passphrase: <code>gpg --batch --pinentry-mode loopback --passphrase '' --quick-generate-key</code>. <code>op</code> and <code>brew</code> are fake scripts on PATH. They read fixtures and log their calls, because those are external services. <code>HOME</code> is a temp directory.</p>
+<div class="tablewrap"><table>
+  <tr><th>Package</th><th>Behaviour proved (each test fails if the code is wrong)</th></tr>
+  <tr><td>mapping</td><td>Rejects duplicate pass or env, a bad env name, a ref without <code>op://</code>, command scope without commands, unknown keys, and a future version. Default scope is <code>global</code>.</td></tr>
+  <tr><td>syncer</td><td>Inserts a new entry. Makes no git commit when values are equal. Leaves the pass bytes unchanged when the Decider skips. Overwrites when it says overwrite. Reports an orphan and deletes it only with prune. A value with a trailing newline round-trips byte for byte. No recorded argv contains the secret value. A dirty store stops sync.</td></tr>
+  <tr><td>store / rollback</td><td>Restore to a tag brings back the old ciphertext and removes entries added later. <code>--entry</code> touches one file only. Stops when <code>.gpg-id</code> changed.</td></tr>
+  <tr><td>shellenv</td><td>Evaluating <code>pvault env</code> output in <code>zsh -c</code> for the value <code>a'b$(touch $TMP/x)</code> sets the exact value and creates no file. Writing the block twice gives a byte-identical file. Text outside the markers stays byte-identical.</td></tr>
+  <tr><td>setup</td><td>The fake brew with pinentry-mac missing puts it in the manifest. A second run makes no install call. Uninstall removes only manifest packages and skips one that has outside dependents. <code>--purge-vault</code> with a wrong confirmation deletes nothing. A key created before setup survives <code>--purge-key</code>.</td></tr>
+  <tr><td>tui</td><td>Model <code>Update</code> tests: <code>s</code> starts sync. In the conflict modal, <code>o</code> sends an overwrite decision and <code>s</code> sends skip. Rollback needs the typed confirmation. Reveal goes back to masked after the timer message.</td></tr>
+</table></div>
+<p><b>Manual end-to-end on this Mac</b> (the output goes in the PR): <code>./install.sh</code>, add the PagerDuty entry to the mapping, <code>pvault sync</code>, <code>pvault check; echo $?</code> → <code>0</code>, then in a new shell <code>[ -n "$PAGERDUTY_API_KEY" ] &amp;&amp; echo set</code>, <code>pvault rollback HEAD~1 --entry pagerduty-api-key</code>, <code>pvault uninstall --dry-run</code>.</p>
+
+<h2>Risks and mitigations</h2>
+<div class="tablewrap"><table>
+  <tr><th>Risk</th><th>Mitigation</th></tr>
+  <tr><td>Global export leaks secrets to every child process (npm scripts, editors, agents).</td><td>You chose this. <code>scope = "command"</code> and <code>pvault run</code> are available per entry. <code>doctor</code> lists global entries.</td></tr>
+  <tr><td>A shell-quoting bug in <code>pvault env</code> runs code from a secret value.</td><td>Single-quote escaping and the <code>a'b$(touch …)</code> test.</td></tr>
+  <tr><td>A setup edit breaks <code>~/.zshrc</code>.</td><td>Marker blocks only, a backup before the first edit, <code>[[ -x … ]]</code> guard, and <code>env</code> never exits non-zero.</td></tr>
+  <tr><td>Uninstall removes a package that something else needs.</td><td>Manifest only, plus the <code>brew uses --installed</code> check.</td></tr>
+  <tr><td>Rollback restores files encrypted to a lost key.</td><td>Stop when <code>.gpg-id</code> differs.</td></tr>
+  <tr><td>A supply-chain attack through new Go modules.</td><td>Exact pins, committed <code>go.sum</code>, <code>check-dep-age.sh</code> in <code>make check</code>.</td></tr>
+  <tr><td>Bubble Tea v2 is new (v2.1.0 is 17 days old).</td><td>Pin it. Keep the TUI logic in testable <code>Update</code> functions.</td></tr>
+  <tr><td>Secrets stay in Go memory (strings cannot be zeroed).</td><td>Use <code>[]byte</code>, overwrite buffers after use, short-lived process. We accept the remaining risk.</td></tr>
+</table></div>
+
+<h2>Open questions</h2>
+<ol>
+  <li><span class="unv">[UNVERIFIED]</span> The exact JSON field for an item's last-update time in <code>op item get --format json</code> (needed for the conflict prompt). <code>op</code> was not signed in during research. Without it, the prompt shows lengths only.</li>
+  <li><span class="unv">[UNVERIFIED]</span> Does <code>teatest</code> support Bubble Tea v2? If not, the TUI tests call <code>Update</code> directly.</li>
+  <li>Should the mapping file also be stored as a 1Password Document, so a new Mac can run <code>pvault mapping pull</code>? Deferred. Today you copy it by hand.</li>
+  <li>Should setup recommend pinentry-mac's "Save in Keychain"? It removes the passphrase prompt at shell start, but anyone who can unlock your login keychain can then decrypt.</li>
+  <li>Should a new entry (missing in pass) also ask before insert? This design does not ask.</li>
+  <li>Linear ticket for the implementation PRs (CICDM, assigned to you)?</li>
+</ol>
+
+<h2>Alternatives rejected</h2>
+<ul>
+  <li>Python + Textual: needs a Python runtime on every Mac.</li>
+  <li>Shell + gum/fzf: weakest TUI and hardest to test.</li>
+  <li>Two-way sync: needs conflict rules in both directions for little gain.</li>
+  <li>Stored value hashes for change detection: an attacker can brute-force them offline.</li>
+  <li><code>git reset --hard</code> for rollback: destroys history and cannot be undone.</li>
+  <li>A mapping file in the repo: the tool runs on several Macs with different secrets.</li>
+  <li>Prebuilt release binaries: needs CI and an auth flow for a private repo. Building from source is enough for Macs that have Go.</li>
+</ul>
+</main>
