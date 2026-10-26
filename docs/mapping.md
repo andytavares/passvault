@@ -2,7 +2,14 @@
 
 The mapping file lists which 1Password fields pvault copies into pass. It lives at
 `~/.config/pvault/mapping.toml` (or `$XDG_CONFIG_HOME/pvault/mapping.toml` when
-`XDG_CONFIG_HOME` is set). Create one with `pvault mapping init`, then edit it by hand.
+`XDG_CONFIG_HOME` is set). Create one with `pvault mapping init`, then add entries
+in any of three ways:
+
+- edit the file by hand;
+- `pvault mapping add --pass … --ref … [--env …] [--scope …] [--command …]`, which
+  validates before appending (see [commands.md](commands.md#mapping));
+- in the TUI, press `4` then `a` to pick an item and field from 1Password (see
+  [tui.md](tui.md#4--mapping)).
 
 Check it any time with:
 
