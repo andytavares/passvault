@@ -1,0 +1,42 @@
+internal/tui/sync_test.go
+  s_d9c876c5079961::t_27596406dc43a3 82
+internal/tui/vault.go
+  s_d9c876c5079961::t_131eacab5f99c2 9,15-17,64-66,75,92-93,98-101,132-139,218
+internal/tui/history.go
+  s_d9c876c5079961::t_131eacab5f99c2 30
+internal/tui/sync.go
+  s_d9c876c5079961::t_131eacab5f99c2 166-169,218-220,224-227,239-240
+internal/tui/mapping.go
+  s_d9c876c5079961::t_131eacab5f99c2 30,126
+internal/tui/styles.go
+  s_d9c876c5079961::t_18a0ec17176bec 13-17,27-31
+  s_d9c876c5079961::t_131eacab5f99c2 18-20,32-34,38,40,42,44-46,52
+internal/tui/tui_test.go
+  s_d9c876c5079961::t_27596406dc43a3 137,149,152,194,199-265
+internal/tui/tui.go
+  s_d9c876c5079961::t_9898c00fd15178 177
+  s_d9c876c5079961::t_c76de0de16242f 15,56,59-61,271-272,274-275,306-308,352-360,362-366,370-378,380-382,384
+  s_d9c876c5079961::t_e9fff17e83baa1 289-292
+internal/tui/keys.go
+  s_d9c876c5079961::t_131eacab5f99c2 8,14-26,28-31,34-35,39,41,43-47,49,51
+  s_d9c876c5079961::t_e9fff17e83baa1 36-37
+internal/tui/actions_test.go
+  s_d9c876c5079961::t_e9fff17e83baa1 160-174
+  s_d9c876c5079961::t_27596406dc43a3 49,52,55,97-98
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b3be4486a75ea3f84723f6404ab9246768dada4e",
+  "prompts": {},
+  "sessions": {
+    "s_d9c876c5079961": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3f9b1ae3-054e-418e-a947-303c77a825b7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
