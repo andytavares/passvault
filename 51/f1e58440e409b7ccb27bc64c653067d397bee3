@@ -1,0 +1,26 @@
+docs/how-it-works.md
+  s_d9c876c5079961::t_896abb2281133e 67-68
+docs/tui.md
+  s_d9c876c5079961::t_896abb2281133e 103
+  s_d9c876c5079961::t_441bea995f2a3b 3-4,8-16,20-22,28-29,36,50-51,55,59,61,70-71,76,78,81,87
+docs/usage.md
+  s_d9c876c5079961::t_441bea995f2a3b 22
+docs/mapping.md
+  s_d9c876c5079961::t_441bea995f2a3b 11-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "51f1e58440e409b7ccb27bc64c653067d397bee3",
+  "prompts": {},
+  "sessions": {
+    "s_d9c876c5079961": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3f9b1ae3-054e-418e-a947-303c77a825b7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
