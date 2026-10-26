@@ -22,6 +22,9 @@ func (m Model) activeKeys() [][2]string {
 	if m.conflict.get() != nil {
 		return [][2]string{{"o", "overwrite"}, {"s", "skip"}, {"enter", "show both"}, {"esc", "stop sync"}}
 	}
+	if len(m.pickerItems) > 0 && m.picker == pickerItems {
+		return [][2]string{{"type", "search"}, {"←/→", "vault"}, {"↑/↓", "move"}, {"enter", "select"}, {"esc", "close"}}
+	}
 	if len(m.pickerItems) > 0 {
 		return [][2]string{{"↑/↓", "move"}, {"enter", "select"}, {"esc", "close"}}
 	}

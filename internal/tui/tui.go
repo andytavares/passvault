@@ -131,6 +131,8 @@ type Model struct {
 	pickerFields []opcli.Field
 	fieldCursor  int
 	pickerRef    string
+	pickerQuery  string
+	pickerVault  string
 
 	program *tea.Program
 	// conflictHook delivers conflictMsg without a live program; tests set it
@@ -250,6 +252,9 @@ func (m Model) updateKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 	if m.conflict.get() != nil {
 		return m.updateConflict(msg)
+	}
+	if next, cmd, ok := m.updatePicker(msg); ok {
+		return next, cmd
 	}
 	if next, cmd, ok := m.updateGlobalKey(msg); ok {
 		return next, cmd
