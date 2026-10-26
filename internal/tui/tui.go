@@ -12,6 +12,7 @@ import (
 
 	"charm.land/bubbles/v2/help"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
@@ -52,7 +53,11 @@ const (
 	viewSync
 	viewHistory
 	viewMapping
+	viewCount
 )
+
+// viewNames label the tab bar, in view order.
+var viewNames = [viewCount]string{"Vault", "Sync", "History", "Mapping"}
 
 // promptKind is the active modal input, if any.
 type promptKind int
@@ -169,6 +174,7 @@ func (m Model) updateData(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.help.SetWidth(msg.Width)
 	case tea.BackgroundColorMsg:
 		m.styles = newStyles(msg.IsDark())
 	case historyMsg:
@@ -262,11 +268,11 @@ func (m Model) updateGlobalKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd, bool) {
 		}
 		m.clearReveal()
 		return m, tea.Quit, true
-	case "tab":
-		next, cmd := m.switchView((m.active + 1) % 4)
+	case "tab", "right":
+		next, cmd := m.switchView((m.active + 1) % viewCount)
 		return next, cmd, true
-	case "1", "2", "3", "4":
-		next, cmd := m.switchView(view(msg.String()[0] - '1'))
+	case "shift+tab", "left":
+		next, cmd := m.switchView((m.active + viewCount - 1) % viewCount)
 		return next, cmd, true
 	case "?":
 		m.helpAll = !m.helpAll
@@ -280,6 +286,10 @@ func (m Model) updateViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch m.active {
 	case viewVault:
 		return m.updateVault(msg)
+	case viewSync:
+		if msg.String() == "s" {
+			return m.startSync()
+		}
 	case viewHistory:
 		return m.updateHistory(msg)
 	case viewMapping:
@@ -293,6 +303,9 @@ func (m Model) switchView(next view) (tea.Model, tea.Cmd) {
 	m.active = next
 	m.clearReveal()
 	m.notice, m.err = "", nil
+	if next == viewHistory {
+		return m, revisionsCmd(m.deps.Store)
+	}
 	return m, nil
 }
 
@@ -336,24 +349,39 @@ func (m Model) header() string {
 	return fmt.Sprintf(" %s %s %s  %s", title, dim, summary, opMark)
 }
 
-// footer renders the per-view key hints.
-func (m Model) footer() string {
-	if m.prompt != promptNone || m.conflict.get() != nil {
-		return ""
+// tabBar renders one tab per view with the active one highlighted.
+func (m Model) tabBar() string {
+	tabs := make([]string, viewCount)
+	for i, name := range viewNames {
+		style := m.styles.tab
+		if view(i) == m.active {
+			style = m.styles.activeTab
+		}
+		tabs[i] = style.Render(name)
 	}
+	return " " + strings.Join(tabs, " ")
+}
+
+// footer renders the key hints for whatever has focus.
+func (m Model) footer() string {
 	return " " + m.help.View(m.keyMap())
 }
 
-// render composes header, body and footer.
+// chromeHeight counts the header, tab bar, footer, status and divider lines.
+const chromeHeight = 6
+
+// bodyHeight is the space left for the active view.
+func (m Model) bodyHeight() int {
+	return max(1, m.height-chromeHeight)
+}
+
+// render frames body between the header and footer and fills the screen.
 func (m Model) render(body string) string {
-	parts := []string{m.header(), body}
-	if note := m.statusLine(); note != "" {
-		parts = append(parts, note)
+	rule := m.styles.dim.Render(strings.Repeat("─", m.width))
+	if m.height > 0 {
+		body = lipgloss.NewStyle().Height(m.bodyHeight()).MaxHeight(m.bodyHeight()).Render(body)
 	}
-	if footer := m.footer(); footer != "" {
-		parts = append(parts, footer)
-	}
-	return strings.Join(parts, "\n")
+	return strings.Join([]string{m.header(), m.tabBar(), rule, body, rule, m.statusLine(), m.footer()}, "\n")
 }
 
 func (m Model) statusLine() string {

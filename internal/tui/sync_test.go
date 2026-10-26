@@ -79,7 +79,7 @@ func TestConflictModalKeysAndNoOverwriteAll(t *testing.T) {
 	done := startSync(f, &m)
 	openModal(t, &m)
 	view := viewText(m)
-	for _, want := range []string{"[o] overwrite", "[s] skip", "[v] reveal", "[q] stop"} {
+	for _, want := range []string{"[o] overwrite", "[s] skip", "[enter] show both", "[esc] stop"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("modal missing %q:\n%s", want, view)
 		}

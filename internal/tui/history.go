@@ -27,7 +27,7 @@ func (m Model) updateHistory(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if m.revCursor < len(m.revisions)-1 {
 			m.revCursor++
 		}
-	case "R":
+	case "enter":
 		return m.startRollback()
 	}
 	return m, nil

@@ -5,32 +5,50 @@ import (
 	"charm.land/bubbles/v2/key"
 )
 
-// keyMap lists the global keys for the help footer.
+// keyMap lists the keys that work right now, for the help footer.
 type keyMap struct {
 	bindings []key.Binding
 }
 
 func (m Model) keyMap() keyMap {
-	keys := [][2]string{
-		{"1-4/tab", "view"},
-		{"?", "help"},
-		{"q", "quit"},
+	return keyMap{bindings: bindings(m.activeKeys())}
+}
+
+// activeKeys picks hints for the open prompt, conflict or view.
+func (m Model) activeKeys() [][2]string {
+	if m.prompt != promptNone {
+		return [][2]string{{"enter", "confirm"}, {"esc", "cancel"}}
 	}
+	if m.conflict.get() != nil {
+		return [][2]string{{"o", "overwrite"}, {"s", "skip"}, {"enter", "show both"}, {"esc", "stop sync"}}
+	}
+	if len(m.pickerItems) > 0 {
+		return [][2]string{{"↑/↓", "move"}, {"enter", "select"}, {"esc", "close"}}
+	}
+	return append(m.viewKeys(), [2]string{"tab", "next view"}, [2]string{"?", "help"}, [2]string{"q", "quit"})
+}
+
+func (m Model) viewKeys() [][2]string {
 	switch m.active {
 	case viewVault:
-		keys = append(keys, [2]string{"s", "sync"}, [2]string{"c", "check"},
-			[2]string{"r", "reveal"}, [2]string{"y", "copy"},
-			[2]string{"n", "new"}, [2]string{"d", "delete"})
+		return [][2]string{{"enter", "show/hide"}, {"c", "copy"}, {"n", "new"},
+			{"d", "delete"}, {"s", "sync"}, {"r", "refresh"}}
+	case viewSync:
+		return [][2]string{{"s", "sync"}}
 	case viewHistory:
-		keys = append(keys, [2]string{"R", "rollback"})
+		return [][2]string{{"enter", "roll back to"}}
 	case viewMapping:
-		keys = append(keys, [2]string{"e", "edit"}, [2]string{"a", "add"})
+		return [][2]string{{"n", "new"}, {"e", "edit"}}
 	}
-	bindings := make([]key.Binding, len(keys))
+	return nil
+}
+
+func bindings(keys [][2]string) []key.Binding {
+	result := make([]key.Binding, len(keys))
 	for i, pair := range keys {
-		bindings[i] = key.NewBinding(key.WithKeys(pair[0]), key.WithHelp(pair[0], pair[1]))
+		result[i] = key.NewBinding(key.WithKeys(pair[0]), key.WithHelp(pair[0], pair[1]))
 	}
-	return keyMap{bindings: bindings}
+	return result
 }
 
 // ShortHelp implements help.KeyMap.
