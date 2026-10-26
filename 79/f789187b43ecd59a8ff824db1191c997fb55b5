@@ -1,0 +1,36 @@
+docs/mapping.md
+  s_6233c085964b37::t_6a2e139455b06f 5-12
+docs/install.md
+  s_6233c085964b37::t_76d3b9f960e2da 1-160
+docs/commands.md
+  s_6233c085964b37::t_f4f3dd2f9e22e2 1-206
+README.md
+  s_6233c085964b37::t_33cead0a9772e9 1-43
+docs/development.md
+  s_6233c085964b37::t_c837b18e026684 19
+  s_6233c085964b37::t_708c2e68bdc348 1-18,20-43
+docs/troubleshooting.md
+  s_6233c085964b37::t_6e3d6bbfe81705 1-48
+docs/tui.md
+  s_6233c085964b37::t_bbbf87987a2a82 1-95
+docs/usage.md
+  s_6233c085964b37::t_7ea0d9633293e7 1-211
+docs/how-it-works.md
+  s_6233c085964b37::t_e2d3635d767590 1-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79f789187b43ecd59a8ff824db1191c997fb55b5",
+  "prompts": {},
+  "sessions": {
+    "s_6233c085964b37": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5ac0e703-3011-4968-bc43-6adc32641ac3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
