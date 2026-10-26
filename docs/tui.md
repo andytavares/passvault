@@ -1,28 +1,39 @@
 # TUI
 
-Run `pvault` with no arguments in a terminal.
+Run `pvault` with no arguments in a terminal. It takes the whole screen and
+gives it back when you quit.
 
 ```
  pvault ─ /Users/you/.password-store ─ 3 mapped · 1 unmanaged · 0 orphan  op ✓
+  Vault   Sync   History   Mapping
+──────────────────────────────────────────────────────────────────────────
+Entries                                           │ pagerduty-api-key
+▸ pagerduty-api-key            ● synced 2h        │
+  notes/wifi                   ○ unmanaged        │ 1Password  op://Private/PagerDuty API Key/credential
+                                                  │ Value      ••••••••••••••••  press enter to reveal
+──────────────────────────────────────────────────────────────────────────
+ copied pagerduty-api-key (clears in 45 s)
+ enter show/hide • c copy • n new • d delete • s sync • r refresh • tab next view • ? help • q quit
 ```
 
 The header shows the store, entry counts and whether `op` is signed in (`op ✓` /
-`op ✕`). The bottom line lists the keys for the current view; errors and notices
-appear just above it.
+`op ✕`). Below it, the tab bar highlights the current view. The bottom line lists
+the keys that work right now; errors and notices appear just above it. Prompts
+open in a box in the middle of the screen.
 
 ## Keys in every view
 
 | Key | Action |
 |---|---|
-| `1` `2` `3` `4` | Vault, Sync, History, Mapping |
-| `tab` | next view |
+| `tab` / `→` | next view |
+| `shift+tab` / `←` | previous view |
 | `?` | toggle full help |
 | `q`, `ctrl+c` | quit (ignored while a sync runs) |
 | `↑`/`k`, `↓`/`j` | move |
 
 Switching view hides any revealed value.
 
-## 1 · Vault
+## Vault
 
 Left: every entry. Right: the selected entry's 1Password reference, env, scope,
 masked value, last sync and git history.
@@ -36,18 +47,18 @@ masked value, last sync and git history.
 
 | Key | Action |
 |---|---|
-| `r` | reveal the value for 10 seconds |
-| `y` | copy to the clipboard with `pass show -c`; pass clears it after 45 seconds |
+| `enter` | show the value for 10 seconds; `enter` again hides it |
+| `c` | copy to the clipboard with `pass show -c`; pass clears it after 45 seconds |
 | `n` | new pass entry: type a name, `enter`, type the value (masked), `enter`. It is unmanaged: not added to the mapping |
 | `d` | delete the entry: type its exact name to confirm |
 | `s` | start a sync and switch to the Sync view |
-| `c` | re-read 1Password and refresh the list |
+| `r` | refresh: re-read 1Password and the list |
 
 In any prompt, `esc` cancels and `backspace` deletes.
 
-## 2 · Sync
+## Sync
 
-Shows `running…` while a sync started with `s` runs, then a summary notice:
+`s` starts a sync here too. Shows `running…` while a sync runs, then a summary notice:
 `synced: N changed · N unchanged · N skipped`.
 
 A differing entry opens a conflict box with both lengths:
@@ -56,25 +67,25 @@ A differing entry opens a conflict box with both lengths:
 |---|---|
 | `o` | overwrite pass with the 1Password value |
 | `s` | skip this entry |
-| `v` | show both values for 10 seconds |
-| `q` | stop the sync |
+| `enter` | show both values for 10 seconds |
+| `esc` | stop the sync |
 
 There is no "overwrite all" key on purpose. The TUI sync has no prune or
 skip-conflicts option; use `pvault sync --prune` or `--skip-conflicts`.
 
-## 3 · History
+## History
 
-Lists sync tags and store commits. `R` on a commit previews the rollback (entries
+Lists sync tags and store commits. `enter` on a commit previews the rollback (entries
 restored and removed) and runs it only after you type `rollback` and press `enter`.
 
-## 4 · Mapping
+## Mapping
 
 Lists every `[[secret]]` with its reference, and any validation errors in red.
 
 | Key | Action |
 |---|---|
+| `n` | new entry from 1Password (below) |
 | `e` | open the mapping in `$EDITOR` (default `vi`); reloads and re-validates on exit |
-| `a` | add from 1Password (below) |
 
 Add from 1Password:
 
@@ -88,8 +99,6 @@ copy the value.
 
 ## Known issues
 
-- **History view is empty.** It never loads commits or tags, so `R` has nothing to
-  act on. Use `pvault history` and `pvault rollback` until this is fixed.
 - **Sync and check show no per-entry lines.** The Sync view shows only `running…`
-  and the summary; `c` only refreshes the entry list and says `check complete`. Use
+  and the summary; `r` only refreshes the entry list and says `check complete`. Use
   `pvault sync` or `pvault check` to see each entry.

@@ -64,8 +64,8 @@ What pvault does to keep values out of places they leak from:
 - **Never on disk outside pass.** `state.json`, the manifest, reports and error
   messages hold names, lengths, times and tags only. `op` errors include stderr only,
   never partial stdout.
-- **Shown only on request.** Conflicts show lengths. Values appear only after `v` (CLI
-  and TUI) or `r` (TUI), and the TUI hides them again after 10 seconds or on any
+- **Shown only on request.** Conflicts show lengths. Values appear only after `v` (CLI)
+  or `enter` (TUI), and the TUI hides them again after 10 seconds or on any
   move. Buffers are zeroed after use.
 - **No silent overwrite.** A differing pass value needs `o` per entry.
 - **Typed confirmation** for destructive TUI actions (delete, rollback) and for

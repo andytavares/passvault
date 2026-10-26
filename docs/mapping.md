@@ -8,8 +8,8 @@ in any of three ways:
 - edit the file by hand;
 - `pvault mapping add --pass … --ref … [--env …] [--scope …] [--command …]`, which
   validates before appending (see [commands.md](commands.md#mapping));
-- in the TUI, press `4` then `a` to pick an item and field from 1Password (see
-  [tui.md](tui.md#4--mapping)).
+- in the TUI, open the Mapping tab and press `n` to pick an item and field from 1Password (see
+  [tui.md](tui.md#mapping)).
 
 Check it any time with:
 
