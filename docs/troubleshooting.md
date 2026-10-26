@@ -44,5 +44,3 @@ pvault manages them, or ignore the warning if intended.
 **My GPG key expired.**
 Keys created by setup last two years. Extend it: `gpg --quick-set-expire <fingerprint> 2y`.
 
-**The TUI history view is empty.**
-Known issue; see [tui.md](tui.md#known-issues).

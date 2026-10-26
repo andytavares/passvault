@@ -163,10 +163,10 @@ func (m Model) updateConflict(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 const decisionReveal = syncer.Decision(-1)
 
 var conflictKeys = map[string]syncer.Decision{
-	"o": syncer.DecisionOverwrite,
-	"s": syncer.DecisionSkip,
-	"q": syncer.DecisionQuit,
-	"v": decisionReveal,
+	"o":     syncer.DecisionOverwrite,
+	"s":     syncer.DecisionSkip,
+	"esc":   syncer.DecisionQuit,
+	"enter": decisionReveal,
 }
 
 // requestReveal asks the syncer for both values without deciding.
@@ -215,17 +215,16 @@ func (m Model) syncView() string {
 func (m Model) conflictModal() string {
 	conflict := m.conflict.get().conflict
 	lines := []string{
-		"┌ Conflict · " + conflict.Secret.Pass + " ────────────",
-		fmt.Sprintf("│ 1Password  %d chars", conflict.SourceLen),
-		fmt.Sprintf("│ pass       %d chars", conflict.VaultLen),
+		m.styles.title.Render("Conflict · " + conflict.Secret.Pass),
+		fmt.Sprintf("1Password  %d chars", conflict.SourceLen),
+		fmt.Sprintf("pass       %d chars", conflict.VaultLen),
 	}
 	lines = append(lines, m.conflictRevealLines()...)
 	lines = append(lines,
-		"│",
-		"│ [o] overwrite pass   [s] skip   [v] reveal both for 10 s",
-		"│ [q] stop sync",
-		"└───────────────────────────────")
-	return strings.Join(lines, "\n")
+		"",
+		"[o] overwrite pass   [s] skip   [enter] show both for 10 s",
+		"[esc] stop sync")
+	return m.styles.box.Render(strings.Join(lines, "\n"))
 }
 
 func (m Model) conflictRevealLines() []string {
@@ -237,7 +236,7 @@ func (m Model) conflictRevealLines() []string {
 		return nil
 	}
 	return []string{
-		"│ 1Password: " + conflict.source,
-		"│ pass:      " + conflict.vault,
+		"1Password: " + conflict.source,
+		"pass:      " + conflict.vault,
 	}
 }

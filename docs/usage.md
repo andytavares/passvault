@@ -19,7 +19,7 @@ pvault sync
 `mapping add` validates the new entry against the whole file before writing, then
 appends a `[[secret]]` table and leaves the rest of the file untouched. You can also
 edit `~/.config/pvault/mapping.toml` by hand (then run `pvault mapping validate`),
-or press `4` then `a` in the TUI to pick an item and field from 1Password.
+or open the Mapping tab in the TUI and press `n` to pick an item and field from 1Password.
 
 ### Choose who sees it
 

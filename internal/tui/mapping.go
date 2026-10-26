@@ -27,7 +27,7 @@ func (m Model) updateMapping(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case "e":
 		return m.openEditor()
-	case "a":
+	case "n":
 		m.picker, m.pickerCursor = pickerItems, 0
 		return m, itemsCmd(m.deps.Items)
 	}
@@ -123,7 +123,7 @@ func (m Model) mappingView() string {
 
 func (m Model) secretLines() []string {
 	if len(m.mapping.Secrets) == 0 {
-		return []string{m.styles.dim.Render("no entries; press a to add from 1Password")}
+		return []string{m.styles.dim.Render("no entries; press n to add from 1Password")}
 	}
 	var lines []string
 	for i, secret := range m.mapping.Secrets {

@@ -6,10 +6,14 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
+
+// entriesWidth fits the cursor, a 28-column name, glyph and status.
+const entriesWidth = 50
 
 // revealDuration is how long a revealed value stays visible.
 const revealDuration = 10 * time.Second
@@ -57,9 +61,9 @@ func (m Model) updateVault(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.moveCursor(-1)
 	case "down", "j":
 		return m.moveCursor(1)
-	case "r":
-		return m.revealSelected()
-	case "y":
+	case "enter":
+		return m.toggleReveal()
+	case "c":
 		return m.copySelected()
 	case "n":
 		m.prompt, m.input = promptNewName, ""
@@ -68,7 +72,7 @@ func (m Model) updateVault(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.startDelete()
 	case "s":
 		return m.startSync()
-	case "c":
+	case "r":
 		return m, checkCmd(m.deps)
 	}
 	return m, nil
@@ -85,9 +89,14 @@ func (m Model) moveCursor(delta int) (tea.Model, tea.Cmd) {
 	return m, historyCmd(m.deps.Store, m.rows[m.cursor].Name)
 }
 
-func (m Model) revealSelected() (tea.Model, tea.Cmd) {
+// toggleReveal decrypts the selected value, or hides it when shown.
+func (m Model) toggleReveal() (tea.Model, tea.Cmd) {
 	row, ok := m.selectedRow()
 	if !ok {
+		return m, nil
+	}
+	if m.reveal != nil && m.reveal.name == row.Name {
+		m.clearReveal()
 		return m, nil
 	}
 	return m, revealCmd(m.deps.Store, row.Name)
@@ -120,9 +129,14 @@ func (m Model) startSync() (tea.Model, tea.Cmd) {
 
 // vaultView renders the entries list beside the detail pane.
 func (m Model) vaultView() string {
-	list := m.entriesList()
-	detail := m.detailPane()
-	return lipglossJoin(list, detail)
+	list := lipgloss.NewStyle().Width(entriesWidth).Render(m.entriesList())
+	detail := lipgloss.NewStyle().
+		Height(m.bodyHeight()).
+		Border(lipgloss.NormalBorder(), false, false, false, true).
+		BorderForeground(m.styles.dim.GetForeground()).
+		PaddingLeft(1).
+		Render(m.detailPane())
+	return lipgloss.JoinHorizontal(lipgloss.Top, list, detail)
 }
 
 // entriesList renders the left column of entry rows.
@@ -201,7 +215,7 @@ func (m Model) valueText(row syncer.StatusRow) string {
 	if m.reveal != nil && m.reveal.name == row.Name {
 		return m.reveal.value
 	}
-	return strings.Repeat("•", 16) + "  press r to reveal"
+	return strings.Repeat("•", 16) + "  press enter to reveal"
 }
 
 func (m Model) historyLines() []string {

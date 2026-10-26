@@ -134,7 +134,7 @@ func TestCursorMoveDoesNotDecrypt(t *testing.T) {
 		}
 	}
 	view := viewText(m)
-	if !strings.Contains(view, "press r to reveal") {
+	if !strings.Contains(view, "press enter to reveal") {
 		t.Errorf("detail pane should show the masked placeholder:\n%s", view)
 	}
 	if strings.Contains(view, "alpha-value") {
@@ -146,10 +146,10 @@ func TestRevealShowsValueThenTickRemasks(t *testing.T) {
 	f := newFixture(t)
 	f.env.Insert(t, "alpha", "alpha-value")
 	m := f.loadModel(t)
-	next, cmd := m.Update(press("r"))
+	next, cmd := m.Update(press("enter"))
 	m = next.(Model)
 	if cmd == nil {
-		t.Fatal("r should return a reveal command")
+		t.Fatal("enter should return a reveal command")
 	}
 	reveal, ok := revealFromBatch(t, cmd)
 	if !ok {
@@ -191,8 +191,75 @@ func TestRevealClearedOnViewSwitch(t *testing.T) {
 	f.env.Insert(t, "alpha", "alpha-value")
 	m := f.loadModel(t)
 	m.reveal = &revealState{name: "alpha", value: "alpha-value", deadline: f.now.Add(time.Minute)}
-	m = update(t, m, press("2"))
+	m = update(t, m, press("tab"))
 	if m.reveal != nil {
 		t.Error("switching view must clear the reveal")
+	}
+}
+
+func TestViewIsFullscreenWithTabsAndDividers(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	m := f.loadModel(t)
+	view := m.View()
+	if !view.AltScreen {
+		t.Error("the TUI must use the alternate screen")
+	}
+	lines := strings.Split(view.Content, "\n")
+	if len(lines) != m.height {
+		t.Errorf("rendered %d lines, want the full height %d", len(lines), m.height)
+	}
+	for _, want := range []string{"Vault", "Sync", "History", "Mapping", strings.Repeat("─", m.width), "│"} {
+		if !strings.Contains(view.Content, want) {
+			t.Errorf("view missing %q:\n%s", want, view.Content)
+		}
+	}
+}
+
+func TestTabAndArrowsSwitchViews(t *testing.T) {
+	f := newFixture(t)
+	m := f.loadModel(t)
+	steps := []struct {
+		key  string
+		want view
+	}{
+		{"tab", viewSync},
+		{"right", viewHistory},
+		{"shift+tab", viewSync},
+		{"left", viewVault},
+		{"left", viewMapping},
+		{"tab", viewVault},
+	}
+	for _, step := range steps {
+		m = update(t, m, press(step.key))
+		if m.active != step.want {
+			t.Fatalf("after %s: view = %v, want %v", step.key, m.active, step.want)
+		}
+	}
+}
+
+func TestNumberAndYKeysAreUnbound(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	m := f.loadModel(t)
+	m = update(t, m, press("2"))
+	m = update(t, m, press("y"))
+	if m.active != viewVault || m.notice != "" {
+		t.Errorf("2/y should do nothing; view=%v notice=%q", m.active, m.notice)
+	}
+	m = update(t, m, press("c"))
+	if m.notice != "copied alpha (clears in 45 s)" {
+		t.Errorf("c should copy; notice = %q", m.notice)
+	}
+}
+
+func TestEnterHidesARevealedValue(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	m := f.loadModel(t)
+	m.reveal = &revealState{name: "alpha", value: "alpha-value", deadline: f.now.Add(time.Minute)}
+	next, cmd := m.Update(press("enter"))
+	if next.(Model).reveal != nil || cmd != nil {
+		t.Error("enter on a revealed value should hide it without decrypting again")
 	}
 }

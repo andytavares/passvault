@@ -46,13 +46,13 @@ func TestDeleteRequiresExactName(t *testing.T) {
 	}
 }
 
-// openRollback presses R on the older revision and applies the plan.
+// openRollback presses enter on the older revision and applies the plan.
 func openRollback(t *testing.T, m Model) Model {
 	t.Helper()
-	next, cmd := m.Update(press("R"))
+	next, cmd := m.Update(press("enter"))
 	m = next.(Model)
 	if m.prompt != promptRollback {
-		t.Fatalf("R should open the rollback prompt, got %v", m.prompt)
+		t.Fatalf("enter should open the rollback prompt, got %v", m.prompt)
 	}
 	plan, ok := cmd().(planMsg)
 	if !ok {
@@ -94,8 +94,8 @@ const pickerItemJSON = `{
 // walkPicker drives the picker from item list to the env prompt.
 func walkPicker(t *testing.T, m Model) Model {
 	t.Helper()
-	m = update(t, m, press("4"))
-	m = update(t, m, press("a"))
+	m = update(t, m, press("shift+tab"))
+	m = update(t, m, press("n"))
 	m = update(t, m, itemsCmd(m.deps.Items)())
 	if len(m.pickerItems) != 1 {
 		t.Fatalf("picker items = %d, want 1", len(m.pickerItems))
@@ -155,5 +155,20 @@ func TestTooNarrowTerminal(t *testing.T) {
 	m.width = 40
 	if got := viewText(m); !strings.Contains(got, "terminal too narrow (need 60 columns)") {
 		t.Errorf("narrow render = %q", got)
+	}
+}
+
+func TestHistoryTabLoadsCommits(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	m := f.loadModel(t)
+	m = update(t, m, press("tab"))
+	next, cmd := m.Update(press("tab"))
+	if cmd == nil {
+		t.Fatal("opening History should load commits")
+	}
+	m = update(t, next.(Model), cmd())
+	if len(m.revisions) == 0 || !strings.Contains(viewText(m), m.revisions[0].Short) {
+		t.Errorf("History should list commits:\n%s", viewText(m))
 	}
 }
