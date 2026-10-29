@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // Cmd describes one program run. Secrets go in Stdin, never in Args.
@@ -80,19 +81,25 @@ func (OS) Run(ctx context.Context, c Cmd) (Result, error) {
 }
 
 // Recorder wraps a Runner and keeps every Cmd it ran, for test assertions.
+// The TUI runs commands concurrently, so Calls is guarded by mu.
 type Recorder struct {
 	Inner Runner
 	Calls []Cmd
+	mu    sync.Mutex
 }
 
 // Run implements Runner.
 func (r *Recorder) Run(ctx context.Context, c Cmd) (Result, error) {
+	r.mu.Lock()
 	r.Calls = append(r.Calls, c)
+	r.mu.Unlock()
 	return r.Inner.Run(ctx, c)
 }
 
 // Argv returns every recorded call as its argv string.
 func (r *Recorder) Argv() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	out := make([]string, len(r.Calls))
 	for i, c := range r.Calls {
 		out[i] = c.String()

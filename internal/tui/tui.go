@@ -41,9 +41,17 @@ type ItemSource interface {
 
 // Run opens the TUI. It is a thin shell: all logic is in Model.
 func Run(deps Deps) error {
-	program := tea.NewProgram(NewModel(deps))
-	_, err := program.Run()
+	_, err := newProgram(deps).Run()
 	return err
+}
+
+// newProgram builds the program and routes sync conflicts to it.
+func newProgram(deps Deps, options ...tea.ProgramOption) *tea.Program {
+	model := NewModel(deps)
+	var program *tea.Program
+	model.conflictHook = func(msg tea.Msg) { program.Send(msg) }
+	program = tea.NewProgram(model, options...)
+	return program
 }
 
 type view int
@@ -134,9 +142,8 @@ type Model struct {
 	pickerQuery  string
 	pickerVault  string
 
-	program *tea.Program
-	// conflictHook delivers conflictMsg without a live program; tests set it
-	// before the sync goroutine starts, so it needs no lock.
+	// conflictHook delivers conflictMsg: program.Send in the live TUI, or a
+	// test hook. It is set before any sync starts, so it needs no lock.
 	conflictHook func(tea.Msg)
 }
 

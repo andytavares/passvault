@@ -102,3 +102,27 @@ func seedConflict(t *testing.T, f *fixture) {
 	f.state.Entries["alpha"] = syncer.EntryState{SyncedAt: f.now.Add(-time.Hour)}
 	f.state.Entries["beta"] = syncer.EntryState{SyncedAt: f.now.Add(-time.Hour)}
 }
+
+// TestLiveProgramRaisesConflicts drives the program Run builds, without the
+// test hook: a changed 1Password value must reach the modal and overwrite.
+func TestLiveProgramRaisesConflicts(t *testing.T) {
+	f := newFixture(t)
+	seedConflict(t, f)
+	program := newProgram(f.deps, tea.WithInput(nil), tea.WithoutRenderer(), tea.WithWindowSize(100, 30))
+	finished := make(chan error, 1)
+	go func() { _, err := program.Run(); finished <- err }()
+	program.Send(press("s"))
+	deadline := time.Now().Add(10 * time.Second)
+	for f.env.Show(t, "alpha") != "alpha-value" {
+		if time.Now().After(deadline) {
+			program.Quit()
+			t.Fatal("sync skipped the changed value without asking")
+		}
+		program.Send(press("o"))
+		time.Sleep(50 * time.Millisecond)
+	}
+	program.Quit()
+	if err := <-finished; err != nil {
+		t.Fatal(err)
+	}
+}

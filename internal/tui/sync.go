@@ -60,8 +60,7 @@ type revealBothMsg struct {
 }
 
 // tuiDecider implements syncer.Decider by messaging the program and blocking
-// on a channel until the user answers. deliver is program.Send in the live
-// program, or a test hook that applies the message directly.
+// on a channel until the user answers. deliver is the model's conflictHook.
 type tuiDecider struct {
 	deliver func(tea.Msg)
 }
@@ -78,24 +77,11 @@ func (d tuiDecider) Decide(_ context.Context, conflict syncer.Conflict) (syncer.
 	return <-answer, nil
 }
 
-// conflictDeliverer picks where conflictMsg goes: the live program, or the
-// test hook.
-func (m *Model) conflictDeliverer() func(tea.Msg) {
-	if m.conflictHook != nil {
-		return m.conflictHook
-	}
-	if m.program != nil {
-		return m.program.Send
-	}
-	return nil
-}
-
 // syncCmd runs the sync with the TUI decider; conflicts arrive as messages.
 func syncCmd(m *Model) tea.Cmd {
 	deps := m.deps
 	state := m.state
-	deliver := m.conflictDeliverer()
-	decider := tuiDecider{deliver: deliver}
+	decider := tuiDecider{deliver: m.conflictHook}
 	return func() tea.Msg {
 		mapping, err := deps.Mapping()
 		if err != nil {
