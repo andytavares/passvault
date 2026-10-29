@@ -1,0 +1,35 @@
+internal/tui/env_test.go
+  s_e8033d4499a6f7::t_7ff8f810e7106c 317
+  s_e8033d4499a6f7::t_24e1089de46ba0 271-316,318-320
+internal/tui/keys.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 46
+internal/tui/prompt.go
+  s_e8033d4499a6f7::t_f165e742b0b869 35
+  s_e8033d4499a6f7::t_aacc1a26b54947 15,36-37,39,66-80,139-140
+  s_e8033d4499a6f7::t_accb24b7ef6c3a 82-83
+  s_e8033d4499a6f7::t_4748e5ec5fe0e8 81
+internal/tui/env.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 21-22,67-106
+  s_e8033d4499a6f7::t_147c0d3db5826f 107
+docs/tui.md
+  s_e8033d4499a6f7::t_aacc1a26b54947 108,113
+internal/tui/tui.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 84,114-115
+  s_e8033d4499a6f7::t_79e8eab145b11d 116
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1aaf7eb9b3b19cea0838140466390a512453fc3c",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
