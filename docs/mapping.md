@@ -30,12 +30,17 @@ Each `[[secret]]` table:
 
 - `pass` (required): path in the pass store, without the `.gpg` suffix. No leading
   `/` and no `..` segments. Must be unique in the file.
-- `ref` (required): the 1Password secret reference, starting with `op://`.
+- `ref` (optional): the 1Password secret reference, starting with `op://`. Without
+  `ref` the entry is local: sync never reads or prunes it, and it exists only to
+  put a pass entry in the environment. A local entry needs `env`.
 - `env` (optional): environment variable name. Must match `[A-Z_][A-Z0-9_]*` and be
   unique in the file.
 - `scope` (optional): `global` (the default), `command` or `none`. See below.
 - `commands` (only with `scope = "command"`): the commands that get the variable.
   Names must match `[A-Za-z0-9_.-]+` because each becomes a shell function name.
+- `enabled` (optional): `false` keeps the variable out of the shell and out of
+  `pvault run`, but keeps `scope` and `commands` for when you turn it back on. The
+  secret still syncs. Default `true`.
 
 ## Getting a reference
 
