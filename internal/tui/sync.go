@@ -80,10 +80,15 @@ func (d tuiDecider) Decide(_ context.Context, conflict syncer.Conflict) (syncer.
 // syncCmd runs the sync with the TUI decider; conflicts arrive as messages.
 func syncCmd(m *Model) tea.Cmd {
 	deps := m.deps
-	state := m.state
 	decider := tuiDecider{deliver: m.conflictHook}
 	return func() tea.Msg {
 		mapping, err := deps.Mapping()
+		if err != nil {
+			return errMsg{err}
+		}
+		// Read state here: m.state is empty before the first load and its
+		// map is shared with the model, which renders while sync writes.
+		state, err := deps.State()
 		if err != nil {
 			return errMsg{err}
 		}

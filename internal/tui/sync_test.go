@@ -126,3 +126,21 @@ func TestLiveProgramRaisesConflicts(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestSyncBeforeFirstLoad covers s pressed before loadedMsg arrives, when
+// the model's state is still empty.
+func TestSyncBeforeFirstLoad(t *testing.T) {
+	f := newFixture(t)
+	m := NewModel(f.deps)
+	next, cmd := m.Update(press("s"))
+	m = next.(Model)
+	if cmd == nil {
+		t.Fatal("s did not start a sync")
+	}
+	if msg, ok := cmd().(syncDoneMsg); !ok || msg.added != 2 {
+		t.Fatalf("sync returned %#v, want 2 added", msg)
+	}
+	if got := f.env.Show(t, "alpha"); got != "alpha-value" {
+		t.Fatalf("alpha = %q", got)
+	}
+}
