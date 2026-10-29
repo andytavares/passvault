@@ -268,3 +268,53 @@ func TestEnvColumnsAlignWithLongValues(t *testing.T) {
 		}
 	}
 }
+
+func TestEnvNewCreatesEntryAndLocalEnv(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	m = update(t, m, press("n"))
+	m = typeKeys(t, m, "work/github")
+	m = typeKeys(t, m, "github_token")
+	if m.prompt != promptNewValue {
+		t.Fatalf("prompt = %v, want promptNewValue", m.prompt)
+	}
+	m = typeKeys(t, m, "ghp-secret")
+	if got := f.env.Show(t, "work/github"); got != "ghp-secret" {
+		t.Fatalf("pass value = %q", got)
+	}
+	secret, ok := findSecret(t, f, "work/github")
+	if !ok || secret.Env != "GITHUB_TOKEN" || secret.Ref != "" {
+		t.Fatalf("secret = %+v, ok=%v; want local GITHUB_TOKEN", secret, ok)
+	}
+	if m.notice != "added work/github with env GITHUB_TOKEN" {
+		t.Errorf("notice = %q", m.notice)
+	}
+}
+
+func TestEnvNewRefusesExistingEntry(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	m = typeKeys(t, update(t, m, press("n")), "alpha")
+	if m.prompt != promptNone || m.notice != "alpha exists; select it and press a" {
+		t.Fatalf("prompt = %v, notice = %q", m.prompt, m.notice)
+	}
+	if got := f.env.Show(t, "alpha"); got != "alpha-value" {
+		t.Fatalf("alpha value = %q, want unchanged", got)
+	}
+}
+
+func TestEnvNewWithInvalidEnvCreatesNothing(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	m = typeKeys(t, update(t, m, press("n")), "work/bad")
+	m = typeKeys(t, typeKeys(t, m, "bad-name"), "value")
+	if m.err == nil {
+		t.Fatal("want an error for env bad-name")
+	}
+	if _, ok := findSecret(t, f, "work/bad"); ok {
+		t.Fatal("mapping must not change")
+	}
+	if f.deps.Store.Exists("work/bad") {
+		t.Fatal("pass entry must not be created")
+	}
+}

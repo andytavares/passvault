@@ -81,6 +81,7 @@ const (
 	promptAddEnv
 	promptEnvName
 	promptEnvRemove
+	promptNewEnv
 )
 
 // pickerStep tracks the add-from-1Password picker stages.
@@ -110,7 +111,9 @@ type Model struct {
 	helpAll bool
 	notice  string
 	err     error
-	opOK    bool
+	// newEnv is the env name for an entry the Env view is creating.
+	newEnv string
+	opOK   bool
 
 	mapping    mapping.Mapping
 	vaultNames []string

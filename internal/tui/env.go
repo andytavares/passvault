@@ -18,6 +18,8 @@ func (m Model) updateEnv(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.envCursor = clampIndex(m.envCursor-1, len(m.envEntries()))
 	case "down", "j":
 		m.envCursor = clampIndex(m.envCursor+1, len(m.envEntries()))
+	case "n":
+		m.prompt, m.input = promptNewName, ""
 	case "a":
 		if name != "" {
 			m.prompt, m.input, m.pending = promptEnvName, secret.Env, name
@@ -60,6 +62,47 @@ func (m Model) envSelection() (string, mapping.Secret) {
 	}
 	secret, _ := m.mapping.Find(entries[m.envCursor])
 	return entries[m.envCursor], secret
+}
+
+// submitEnvNewName asks for the env name, unless the entry exists: the
+// value prompt would overwrite it.
+func (m Model) submitEnvNewName() (tea.Model, tea.Cmd) {
+	name := strings.TrimSpace(m.input)
+	if m.deps.Store.Exists(name) {
+		m.prompt, m.input = promptNone, ""
+		m.notice = name + " exists; select it and press a"
+		return m, nil
+	}
+	return m.nextPrompt(promptNewEnv)
+}
+
+// submitNewEnv keeps the env name and asks for the entry's value.
+func (m Model) submitNewEnv() (tea.Model, tea.Cmd) {
+	env := strings.ToUpper(strings.TrimSpace(m.input))
+	if env == "" {
+		return m, nil
+	}
+	m.newEnv, m.input, m.prompt = env, "", promptNewValue
+	return m, nil
+}
+
+// insertWithEnvCmd checks the env name, stores the value, then adds a local
+// secret, so a bad name creates nothing.
+func (m Model) insertWithEnvCmd(name, env, value string) tea.Cmd {
+	deps := m.deps
+	return func() tea.Msg {
+		check := mapping.Mapping{Version: mapping.CurrentVersion, Secrets: []mapping.Secret{{Pass: name, Env: env}}}
+		if err := check.Validate(); err != nil {
+			return errMsg{err}
+		}
+		if msg, ok := insertCmd(deps.Store, name, value)().(errMsg); ok {
+			return msg
+		}
+		if err := editSecret(deps, name, func(secret *mapping.Secret) { secret.Env = env }); err != nil {
+			return errMsg{err}
+		}
+		return mutatedMsg{"added " + name + " with env " + env}
+	}
 }
 
 // toggleEnv turns the env variable off, or back on by dropping the flag.

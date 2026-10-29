@@ -12,7 +12,7 @@ import (
 func (m Model) updatePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
-		m.prompt, m.input = promptNone, ""
+		m.prompt, m.input, m.newEnv = promptNone, "", ""
 		return m, nil
 	case "enter":
 		return m.submitPrompt()
@@ -32,11 +32,11 @@ func (m Model) updatePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) submitPrompt() (tea.Model, tea.Cmd) {
 	switch m.prompt {
 	case promptNewName:
-		return m.nextPrompt(promptNewValue)
+		return m.submitNewName()
+	case promptNewEnv:
+		return m.submitNewEnv()
 	case promptNewValue:
-		name, value := m.pending, m.input
-		m.prompt, m.input, m.pending = promptNone, "", ""
-		return m, insertCmd(m.deps.Store, name, value)
+		return m.submitNewValue()
 	case promptDelete:
 		return m.submitDelete()
 	case promptRollback:
@@ -61,6 +61,24 @@ func (m Model) nextPrompt(next promptKind) (tea.Model, tea.Cmd) {
 	}
 	m.pending, m.input, m.prompt = m.input, "", next
 	return m, nil
+}
+
+// submitNewName opens the value prompt; the Env view asks for the env first.
+func (m Model) submitNewName() (tea.Model, tea.Cmd) {
+	if m.active == viewEnv {
+		return m.submitEnvNewName()
+	}
+	return m.nextPrompt(promptNewValue)
+}
+
+// submitNewValue stores the new entry, with its env name when one was given.
+func (m Model) submitNewValue() (tea.Model, tea.Cmd) {
+	name, value, env := m.pending, m.input, m.newEnv
+	m.prompt, m.input, m.pending, m.newEnv = promptNone, "", "", ""
+	if env != "" {
+		return m, m.insertWithEnvCmd(name, env, value)
+	}
+	return m, insertCmd(m.deps.Store, name, value)
 }
 
 // submitDelete removes the entry only when the typed name matches exactly.
@@ -118,6 +136,8 @@ func (m Model) promptView() string {
 		return "pass name\n> " + m.input
 	case promptAddEnv:
 		return "env name (empty for none)\n> " + m.input
+	case promptNewEnv:
+		return "Env name for " + m.pending + "\n> " + m.input
 	case promptEnvName, promptEnvRemove:
 		return m.envPromptText()
 	}
