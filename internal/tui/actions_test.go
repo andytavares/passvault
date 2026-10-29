@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
+	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
 // typeKeys feeds one key per character, then enter; any returned command is
@@ -43,6 +44,34 @@ func TestDeleteRequiresExactName(t *testing.T) {
 	m = typeKeys(t, m, "alpha")
 	if f.deps.Store.Exists("alpha") {
 		t.Fatal("exact name should delete the entry")
+	}
+}
+
+func TestDeleteMappedEntryRemovesMappingAndState(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	f.state.Entries["alpha"] = syncer.EntryState{Tag: "sync-1"}
+	m := f.loadModel(t)
+	m = update(t, m, press("d"))
+	m = typeKeys(t, m, "alpha")
+	if m.err != nil {
+		t.Fatal(m.err)
+	}
+	mapped, err := f.deps.Mapping()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := mapped.Find("alpha"); ok {
+		t.Fatal("alpha must leave the mapping, or sync re-creates it")
+	}
+	if _, ok := f.state.Entries["alpha"]; ok {
+		t.Fatal("alpha must leave the sync state, or it shows as an orphan")
+	}
+	m = update(t, m, loadCmd(f.deps)())
+	for _, row := range m.rows {
+		if row.Name == "alpha" {
+			t.Fatalf("alpha still listed as %v", row.Kind)
+		}
 	}
 }
 

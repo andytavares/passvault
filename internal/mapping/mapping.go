@@ -102,6 +102,56 @@ func AppendSecret(path string, s Secret) error {
 	return appendTable(path, data, renderSecret(s))
 }
 
+// RemoveSecret deletes the [[secret]] table for pass from the file at path.
+// It edits the text, so comments and the other tables keep their bytes.
+func RemoveSecret(path, pass string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	lines := strings.SplitAfter(string(data), "\n")
+	start, end := tableBounds(lines, pass)
+	if start < 0 {
+		return fmt.Errorf("%s: no [[secret]] with pass %q", path, pass)
+	}
+	kept := strings.Join(append(lines[:start:start], lines[end:]...), "")
+	if _, err := Parse([]byte(kept)); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
+	return os.WriteFile(path, []byte(kept), 0o600)
+}
+
+// tableBounds returns the line range of the [[secret]] table for pass,
+// or -1 when no table has that pass.
+func tableBounds(lines []string, pass string) (start, end int) {
+	start = -1
+	for i, line := range lines {
+		if !strings.HasPrefix(strings.TrimSpace(line), "[") {
+			continue
+		}
+		if start >= 0 {
+			return start, i
+		}
+		var table struct {
+			Secret []Secret `toml:"secret"`
+		}
+		_, err := toml.Decode(strings.Join(lines[i:nextHeader(lines, i)], ""), &table)
+		if err == nil && len(table.Secret) == 1 && table.Secret[0].Pass == pass {
+			start = i
+		}
+	}
+	return start, len(lines)
+}
+
+func nextHeader(lines []string, from int) int {
+	for i := from + 1; i < len(lines); i++ {
+		if strings.HasPrefix(strings.TrimSpace(lines[i]), "[") {
+			return i
+		}
+	}
+	return len(lines)
+}
+
 func (s Secret) problems(index int) []error {
 	var problems []error
 	at := fmt.Sprintf("secret[%d] (%q)", index, s.Pass)

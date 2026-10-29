@@ -216,3 +216,31 @@ func TestAppendSecretRejectsDuplicatePass(t *testing.T) {
 		t.Fatalf("file changed after rejection:\n%q", data)
 	}
 }
+
+func TestRemoveSecretKeepsOtherBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	head := "# my comment\nversion = 1\n\n[[secret]]\npass = \"a\"\nref = \"op://V/I/f\"\n\n"
+	tail := "[[secret]]\npass = \"c\"\nref = \"op://V/K/f\"\n"
+	removed := "[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\n\n"
+	if err := os.WriteFile(path, []byte(head+removed+tail), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveSecret(path, "b"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if string(data) != head+tail {
+		t.Fatalf("got:\n%q", data)
+	}
+}
+
+func TestRemoveSecretMissingPassFails(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	existing := "version = 1\n\n[[secret]]\npass = \"a\"\nref = \"op://V/I/f\"\n"
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveSecret(path, "b"); err == nil {
+		t.Fatal("want error for a pass that is not mapped")
+	}
+}

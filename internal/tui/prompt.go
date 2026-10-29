@@ -71,7 +71,7 @@ func (m Model) submitDelete() (tea.Model, tea.Cmd) {
 		m.notice = "name did not match; entry kept"
 		return m, nil
 	}
-	return m, removeCmd(m.deps.Store, row.Name)
+	return m, removeCmd(m.deps, row.Name)
 }
 
 // submitRollback runs the rollback only for the exact word "rollback".
