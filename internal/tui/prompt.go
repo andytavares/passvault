@@ -55,6 +55,10 @@ func (m Model) submitPrompt() (tea.Model, tea.Cmd) {
 		return m, nil
 	case promptAddEnv:
 		return m.submitAddSecret()
+	case promptEnvName:
+		return m.submitEnvName()
+	case promptEnvRemove:
+		return m.submitEnvRemove()
 	}
 	return m, nil
 }
@@ -114,6 +118,8 @@ func (m Model) promptView() string {
 		return "pass name\n> " + m.input
 	case promptAddEnv:
 		return "env name (empty for none)\n> " + m.input
+	case promptEnvName, promptEnvRemove:
+		return m.envPromptText()
 	}
 	return ""
 }

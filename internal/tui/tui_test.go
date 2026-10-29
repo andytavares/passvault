@@ -209,7 +209,7 @@ func TestViewIsFullscreenWithTabsAndDividers(t *testing.T) {
 	if len(lines) != m.height {
 		t.Errorf("rendered %d lines, want the full height %d", len(lines), m.height)
 	}
-	for _, want := range []string{"Vault", "Sync", "History", "Mapping", strings.Repeat("─", m.width), "│"} {
+	for _, want := range []string{"Vault", "Sync", "History", "Mapping", "Env", strings.Repeat("─", m.width), "│"} {
 		if !strings.Contains(view.Content, want) {
 			t.Errorf("view missing %q:\n%s", want, view.Content)
 		}
@@ -227,7 +227,9 @@ func TestTabAndArrowsSwitchViews(t *testing.T) {
 		{"right", viewHistory},
 		{"shift+tab", viewSync},
 		{"left", viewVault},
+		{"left", viewEnv},
 		{"left", viewMapping},
+		{"tab", viewEnv},
 		{"tab", viewVault},
 	}
 	for _, step := range steps {

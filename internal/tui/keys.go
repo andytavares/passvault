@@ -42,6 +42,8 @@ func (m Model) viewKeys() [][2]string {
 		return [][2]string{{"enter", "roll back to"}}
 	case viewMapping:
 		return [][2]string{{"n", "new"}, {"e", "edit"}}
+	case viewEnv:
+		return [][2]string{{"a", "add/rename env"}, {"space", "on/off"}, {"d", "remove env"}}
 	}
 	return nil
 }
