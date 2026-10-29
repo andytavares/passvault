@@ -1,0 +1,31 @@
+internal/tui/env_test.go
+  s_e8033d4499a6f7::t_7ff8f810e7106c 317
+  s_e8033d4499a6f7::t_24e1089de46ba0 271-316,318-320
+internal/tui/env.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 21-22,67-106
+  s_e8033d4499a6f7::t_147c0d3db5826f 107
+docs/tui.md
+  s_e8033d4499a6f7::t_aacc1a26b54947 108,113
+internal/tui/prompt.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 15,35-37,39-40,42-46,129-130
+internal/tui/tui.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 84,114-115
+internal/tui/keys.go
+  s_e8033d4499a6f7::t_aacc1a26b54947 46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5a9a31a877ec3feb832712a496e5ef7754e53ae9",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
