@@ -1,0 +1,37 @@
+internal/syncer/status.go
+  s_e8033d4499a6f7::t_02ad50dd972418 46,50-52,66-67,71-72,75
+internal/syncer/syncer_test.go
+  s_e8033d4499a6f7::t_86e2c71b2c6635 450-467
+internal/shellenv/shellenv_test.go
+  s_e8033d4499a6f7::t_1b46da7876c695 222-245
+internal/cli/doctor.go
+  s_e8033d4499a6f7::t_83200d2a485044 136
+internal/shellenv/shellenv.go
+  s_e8033d4499a6f7::t_83200d2a485044 37,100,112,124,143
+internal/cli/doctor_test.go
+  s_e8033d4499a6f7::t_1b46da7876c695 85-96
+internal/syncer/status_test.go
+  s_e8033d4499a6f7::t_c3c210f99f4469 50-51
+  s_e8033d4499a6f7::t_86e2c71b2c6635 40-49
+  s_e8033d4499a6f7::t_40638135327b4d 6
+internal/syncer/syncer.go
+  s_e8033d4499a6f7::t_02ad50dd972418 138-140
+internal/cli/sync_test.go
+  s_e8033d4499a6f7::t_b94520c671f06d 54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4654c74842db3f6cb625c9549cd9f7f585eba19b",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "unknown"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
