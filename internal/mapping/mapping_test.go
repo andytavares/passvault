@@ -45,6 +45,8 @@ var validateCases = []validateCase{
 	{"command scope without commands", with(Secret{Pass: "a", Ref: "op://V/I/f", Env: "TOKEN", Scope: ScopeCommand}), "commands"},
 	{"command name has shell metachar", with(Secret{Pass: "a", Ref: "op://V/I/f", Env: "TOKEN", Scope: ScopeCommand, Commands: []string{"gh;rm"}}), "commands"},
 	{"commands without command scope", with(Secret{Pass: "a", Ref: "op://V/I/f", Commands: []string{"gh"}}), "commands"},
+	{"local entry with env is valid", with(Secret{Pass: "a", Env: "TOKEN"}), ""},
+	{"local entry without env", with(Secret{Pass: "a"}), "needs env"},
 }
 
 var (
@@ -242,5 +244,71 @@ func TestRemoveSecretMissingPassFails(t *testing.T) {
 	}
 	if err := RemoveSecret(path, "b"); err == nil {
 		t.Fatal("want error for a pass that is not mapped")
+	}
+}
+
+func TestParseEnabledDefaultsOn(t *testing.T) {
+	m, err := Parse([]byte("version = 1\n[[secret]]\npass = \"a\"\nenv = \"A\"\n[[secret]]\npass = \"b\"\nenv = \"B\"\nenabled = false\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !m.Secrets[0].IsEnabled() || m.Secrets[1].IsEnabled() {
+		t.Fatalf("enabled = %v, %v; want true, false", m.Secrets[0].IsEnabled(), m.Secrets[1].IsEnabled())
+	}
+}
+
+func TestAppendLocalDisabledSecretRoundTrips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	if err := os.WriteFile(path, []byte("version = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	off := false
+	if err := AppendSecret(path, Secret{Pass: "notes/wifi", Env: "WIFI_PASSWORD", Enabled: &off}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if strings.Contains(string(data), "ref") || !strings.Contains(string(data), "enabled = false") {
+		t.Fatalf("want no ref line and enabled = false:\n%s", data)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := m.Find("notes/wifi"); got.IsEnabled() || got.Ref != "" {
+		t.Fatalf("loaded %+v", got)
+	}
+}
+
+func TestReplaceSecretKeepsOtherBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	head := "# my comment\nversion = 1\n\n[[secret]]\npass = \"a\"\nref = \"op://V/I/f\"\n\n"
+	tail := "[[secret]]\npass = \"c\"\nref = \"op://V/K/f\"\n"
+	old := "[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\n\n"
+	if err := os.WriteFile(path, []byte(head+old+tail), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ReplaceSecret(path, Secret{Pass: "b", Ref: "op://V/J/f", Env: "TOKEN_B", Scope: ScopeGlobal}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	want := head + "[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\nenv = \"TOKEN_B\"\n\n" + tail
+	if string(data) != want {
+		t.Fatalf("got:\n%q\nwant:\n%q", data, want)
+	}
+}
+
+func TestReplaceSecretRejectsInvalidResult(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	existing := "version = 1\n\n[[secret]]\npass = \"a\"\nref = \"op://V/I/f\"\nenv = \"A\"\n\n[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\n"
+	if err := os.WriteFile(path, []byte(existing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := ReplaceSecret(path, Secret{Pass: "b", Ref: "op://V/J/f", Env: "A"})
+	if err == nil || !strings.Contains(err.Error(), "duplicate env") {
+		t.Fatalf("want duplicate env error, got %v", err)
+	}
+	data, _ := os.ReadFile(path)
+	if string(data) != existing {
+		t.Fatalf("file changed on a rejected replace:\n%s", data)
 	}
 }

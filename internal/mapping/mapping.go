@@ -105,6 +105,26 @@ func AppendSecret(path string, s Secret) error {
 // RemoveSecret deletes the [[secret]] table for pass from the file at path.
 // It edits the text, so comments and the other tables keep their bytes.
 func RemoveSecret(path, pass string) error {
+	return editTable(path, pass, func(lastTable bool) string { return "" })
+}
+
+// ReplaceSecret rewrites the [[secret]] table for s.Pass with s. Comments
+// inside that table are lost; the rest of the file keeps its bytes.
+func ReplaceSecret(path string, s Secret) error {
+	if s.Scope == "" {
+		s.Scope = ScopeGlobal
+	}
+	return editTable(path, s.Pass, func(lastTable bool) string {
+		if lastTable {
+			return renderSecret(s)
+		}
+		return renderSecret(s) + "\n"
+	})
+}
+
+// editTable swaps the [[secret]] table for pass with the replacement text,
+// then writes the file only when the result still parses and validates.
+func editTable(path, pass string, replacement func(lastTable bool) string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)
@@ -114,11 +134,11 @@ func RemoveSecret(path, pass string) error {
 	if start < 0 {
 		return fmt.Errorf("%s: no [[secret]] with pass %q", path, pass)
 	}
-	kept := strings.Join(append(lines[:start:start], lines[end:]...), "")
-	if _, err := Parse([]byte(kept)); err != nil {
+	edited := strings.Join(lines[:start], "") + replacement(end == len(lines)) + strings.Join(lines[end:], "")
+	if _, err := Parse([]byte(edited)); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	return os.WriteFile(path, []byte(kept), 0o600)
+	return os.WriteFile(path, []byte(edited), 0o600)
 }
 
 // tableBounds returns the line range of the [[secret]] table for pass,
@@ -168,7 +188,9 @@ func (s Secret) problems(index int) []error {
 	case strings.HasSuffix(s.Pass, ".gpg"):
 		add("pass must not have a .gpg suffix")
 	}
-	if !strings.HasPrefix(s.Ref, "op://") {
+	if s.Ref == "" && s.Env == "" {
+		add("an entry without ref needs env")
+	} else if s.Ref != "" && !strings.HasPrefix(s.Ref, "op://") {
 		add("ref must start with op://")
 	}
 	if s.Env != "" && !envPattern.MatchString(s.Env) {
@@ -231,7 +253,10 @@ func duplicates(secrets []Secret) []error {
 
 func renderSecret(s Secret) string {
 	var lines []string
-	lines = append(lines, "[[secret]]", fmt.Sprintf("pass = %q", s.Pass), fmt.Sprintf("ref = %q", s.Ref))
+	lines = append(lines, "[[secret]]", fmt.Sprintf("pass = %q", s.Pass))
+	if s.Ref != "" {
+		lines = append(lines, fmt.Sprintf("ref = %q", s.Ref))
+	}
 	if s.Env != "" {
 		lines = append(lines, fmt.Sprintf("env = %q", s.Env))
 	}
@@ -240,6 +265,9 @@ func renderSecret(s Secret) string {
 	}
 	if len(s.Commands) > 0 {
 		lines = append(lines, fmt.Sprintf("commands = [%s]", quoteJoin(s.Commands)))
+	}
+	if !s.IsEnabled() {
+		lines = append(lines, "enabled = false")
 	}
 	return strings.Join(lines, "\n") + "\n"
 }
