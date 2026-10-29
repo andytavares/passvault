@@ -32,12 +32,7 @@ func (m Model) updatePrompt(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) submitPrompt() (tea.Model, tea.Cmd) {
 	switch m.prompt {
 	case promptNewName:
-		if m.input == "" {
-			return m, nil
-		}
-		m.pending, m.input = m.input, ""
-		m.prompt = promptNewValue
-		return m, nil
+		return m.nextPrompt(promptNewValue)
 	case promptNewValue:
 		name, value := m.pending, m.input
 		m.prompt, m.input, m.pending = promptNone, "", ""
@@ -47,12 +42,7 @@ func (m Model) submitPrompt() (tea.Model, tea.Cmd) {
 	case promptRollback:
 		return m.submitRollback()
 	case promptAddName:
-		if m.input == "" {
-			return m, nil
-		}
-		m.pending, m.input = m.input, ""
-		m.prompt = promptAddEnv
-		return m, nil
+		return m.nextPrompt(promptAddEnv)
 	case promptAddEnv:
 		return m.submitAddSecret()
 	case promptEnvName:
@@ -60,6 +50,16 @@ func (m Model) submitPrompt() (tea.Model, tea.Cmd) {
 	case promptEnvRemove:
 		return m.submitEnvRemove()
 	}
+	return m, nil
+}
+
+// nextPrompt keeps the typed name in pending and opens the next prompt;
+// an empty name keeps the current prompt open.
+func (m Model) nextPrompt(next promptKind) (tea.Model, tea.Cmd) {
+	if m.input == "" {
+		return m, nil
+	}
+	m.pending, m.input, m.prompt = m.input, "", next
 	return m, nil
 }
 

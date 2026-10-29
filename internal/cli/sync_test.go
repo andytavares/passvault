@@ -263,3 +263,15 @@ func TestSyncSignedOutIncludesHint(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestSyncCountsOnlyEntriesWith1PasswordRef(t *testing.T) {
+	f := newCliFixture(t, "")
+	f.env.Insert(t, "notes/wifi", "wifi-value")
+	f.writeMapping(t, pagerduty, mapping.Secret{Pass: "notes/wifi", Env: "WIFI_PASSWORD"})
+	if err := f.syncOnce(t, "pd-secret-123"); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if !strings.Contains(f.out.String(), "Reading 1 entries from 1Password") {
+		t.Fatalf("local entry counted:\n%s", f.out.String())
+	}
+}

@@ -16,11 +16,12 @@ import (
 // Messages that tea.Cmd functions deliver back to Update.
 type (
 	loadedMsg struct {
-		mapping mapping.Mapping
-		rows    []syncer.StatusRow
-		state   syncer.State
-		opOK    bool
-		mapErr  string
+		mapping    mapping.Mapping
+		vaultNames []string
+		rows       []syncer.StatusRow
+		state      syncer.State
+		opOK       bool
+		mapErr     string
 	}
 	historyMsg   struct{ revisions []store.Revision }
 	revisionsMsg struct {
@@ -52,11 +53,12 @@ func loadCmd(deps Deps) tea.Cmd {
 			return errMsg{err}
 		}
 		return loadedMsg{
-			mapping: m,
-			rows:    syncer.Status(m, state, names),
-			state:   state,
-			opOK:    opHealthy(deps.Source),
-			mapErr:  errString(mapErr),
+			mapping:    m,
+			vaultNames: names,
+			rows:       syncer.Status(m, state, names),
+			state:      state,
+			opOK:       opHealthy(deps.Source),
+			mapErr:     errString(mapErr),
 		}
 	}
 }

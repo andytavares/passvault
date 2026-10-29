@@ -112,12 +112,13 @@ type Model struct {
 	err     error
 	opOK    bool
 
-	mapping mapping.Mapping
-	state   syncer.State
-	rows    []syncer.StatusRow
-	cursor  int
-	history []store.Revision
-	reveal  *revealState
+	mapping    mapping.Mapping
+	vaultNames []string
+	state      syncer.State
+	rows       []syncer.StatusRow
+	cursor     int
+	history    []store.Revision
+	reveal     *revealState
 
 	prompt  promptKind
 	input   string

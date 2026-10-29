@@ -198,15 +198,23 @@ func (s Secret) problems(index int) []error {
 	case strings.HasSuffix(s.Pass, ".gpg"):
 		add("pass must not have a .gpg suffix")
 	}
-	if s.Ref == "" && s.Env == "" {
-		add("an entry without ref needs env")
-	} else if s.Ref != "" && !strings.HasPrefix(s.Ref, "op://") {
-		add("ref must start with op://")
+	problems = append(problems, s.refEnvProblems(at)...)
+	return append(problems, s.scopeProblems(at)...)
+}
+
+// refEnvProblems checks ref and env; a local entry (no ref) needs env.
+func (s Secret) refEnvProblems(at string) []error {
+	var problems []error
+	switch {
+	case s.Ref == "" && s.Env == "":
+		problems = append(problems, fmt.Errorf("%s: an entry without ref needs env", at))
+	case s.Ref != "" && !strings.HasPrefix(s.Ref, "op://"):
+		problems = append(problems, fmt.Errorf("%s: ref must start with op://", at))
 	}
 	if s.Env != "" && !envPattern.MatchString(s.Env) {
-		add("env %q must match [A-Z_][A-Z0-9_]*", s.Env)
+		problems = append(problems, fmt.Errorf("%s: env %q must match [A-Z_][A-Z0-9_]*", at, s.Env))
 	}
-	return append(problems, s.scopeProblems(at)...)
+	return problems
 }
 
 func (s Secret) scopeProblems(at string) []error {

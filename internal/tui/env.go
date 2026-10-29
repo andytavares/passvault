@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -11,106 +12,133 @@ import (
 
 // updateEnv handles keys in the Env view.
 func (m Model) updateEnv(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
-	name, secret, hasSecret := m.envSelection()
+	name, secret := m.envSelection()
 	switch msg.String() {
 	case "up", "k":
-		m.envCursor = clampIndex(m.envCursor-1, len(m.rows))
+		m.envCursor = clampIndex(m.envCursor-1, len(m.envEntries()))
 	case "down", "j":
-		m.envCursor = clampIndex(m.envCursor+1, len(m.rows))
+		m.envCursor = clampIndex(m.envCursor+1, len(m.envEntries()))
 	case "a":
 		if name != "" {
-			m.prompt, m.input = promptEnvName, secret.Env
+			m.prompt, m.input, m.pending = promptEnvName, secret.Env, name
 		}
 	case "space", "d":
 		if name == "" {
 			return m, nil
 		}
-		if secret.Env == "" || !hasSecret {
+		if secret.Env == "" {
 			m.notice = "no env var on " + name + "; press a to add"
 			return m, nil
 		}
 		if msg.String() == "d" {
-			m.prompt = promptEnvRemove
+			m.prompt, m.pending = promptEnvRemove, name
 			return m, nil
 		}
-		return m, m.toggleEnv(secret)
+		return m, m.toggleEnv(name, secret.Env, secret.IsEnabled())
 	}
 	return m, nil
 }
 
-// envSelection returns the entry name under the Env cursor and its secret.
-func (m Model) envSelection() (string, mapping.Secret, bool) {
-	if m.envCursor >= len(m.rows) {
-		return "", mapping.Secret{}, false
+// envEntries lists every vault entry and every mapped pass, sorted, so a
+// local entry whose pass file is missing can still be fixed here.
+func (m Model) envEntries() []string {
+	names := slices.Clone(m.vaultNames)
+	for _, secret := range m.mapping.Secrets {
+		if !slices.Contains(names, secret.Pass) {
+			names = append(names, secret.Pass)
+		}
 	}
-	name := m.rows[m.envCursor].Name
-	secret, ok := m.mapping.Find(name)
-	return name, secret, ok
+	slices.Sort(names)
+	return names
+}
+
+// envSelection returns the entry name under the Env cursor and its secret.
+func (m Model) envSelection() (string, mapping.Secret) {
+	entries := m.envEntries()
+	if m.envCursor >= len(entries) {
+		return "", mapping.Secret{}
+	}
+	secret, _ := m.mapping.Find(entries[m.envCursor])
+	return entries[m.envCursor], secret
 }
 
 // toggleEnv turns the env variable off, or back on by dropping the flag.
-func (m Model) toggleEnv(secret mapping.Secret) tea.Cmd {
-	note := "env " + secret.Env + " on"
-	if secret.IsEnabled() {
-		off := false
-		secret.Enabled, note = &off, "env "+secret.Env+" off"
-	} else {
-		secret.Enabled = nil
+func (m Model) toggleEnv(name, env string, enabled bool) tea.Cmd {
+	note := "env " + env + " on"
+	if enabled {
+		note = "env " + env + " off"
 	}
-	return replaceSecretCmd(m.deps.MappingPath, secret, note)
+	return m.editSecretCmd(name, note, func(secret *mapping.Secret) {
+		if secret.IsEnabled() {
+			off := false
+			secret.Enabled = &off
+		} else {
+			secret.Enabled = nil
+		}
+	})
 }
 
-// submitEnvName sets or renames the env variable of the selected entry.
+// submitEnvName sets or renames the env variable of the prompt's entry.
 func (m Model) submitEnvName() (tea.Model, tea.Cmd) {
-	name, secret, hasSecret := m.envSelection()
-	env := strings.ToUpper(strings.TrimSpace(m.input))
-	m.prompt, m.input = promptNone, ""
+	name, env := m.pending, strings.ToUpper(strings.TrimSpace(m.input))
+	m.prompt, m.input, m.pending = promptNone, "", ""
 	if env == "" {
 		m.notice = "env unchanged"
 		return m, nil
 	}
-	secret.Pass, secret.Env = name, env
-	note := "env " + env + " set on " + name
-	if !hasSecret {
-		return m, mappingWriteCmd(note, func() error { return mapping.AppendSecret(m.deps.MappingPath, secret) })
-	}
-	return m, replaceSecretCmd(m.deps.MappingPath, secret, note)
+	return m, m.editSecretCmd(name, "env "+env+" set on "+name, func(secret *mapping.Secret) {
+		secret.Env = env
+	})
 }
 
 // submitEnvRemove removes the env variable only when the typed name matches.
 func (m Model) submitEnvRemove() (tea.Model, tea.Cmd) {
-	_, secret, _ := m.envSelection()
-	typed := strings.TrimSpace(m.input)
-	m.prompt, m.input = promptNone, ""
+	name, typed := m.pending, strings.TrimSpace(m.input)
+	m.prompt, m.input, m.pending = promptNone, "", ""
+	secret, _ := m.mapping.Find(name)
 	if typed != secret.Env {
 		m.notice = "name did not match; env kept"
 		return m, nil
 	}
-	note := "env " + secret.Env + " removed"
-	if secret.Ref == "" {
-		return m, mappingWriteCmd(note, func() error { return mapping.RemoveSecret(m.deps.MappingPath, secret.Pass) })
-	}
-	secret.Env, secret.Scope, secret.Commands, secret.Enabled = "", mapping.ScopeGlobal, nil, nil
-	return m, replaceSecretCmd(m.deps.MappingPath, secret, note)
+	return m, m.editSecretCmd(name, "env "+secret.Env+" removed", func(secret *mapping.Secret) {
+		secret.Env, secret.Scope, secret.Commands, secret.Enabled = "", mapping.ScopeGlobal, nil, nil
+	})
 }
 
-func replaceSecretCmd(path string, secret mapping.Secret, note string) tea.Cmd {
-	return mappingWriteCmd(note, func() error { return mapping.ReplaceSecret(path, secret) })
-}
-
-// mappingWriteCmd runs one mapping file write, then reports it so the
-// model reloads.
-func mappingWriteCmd(note string, write func() error) tea.Cmd {
+// editSecretCmd runs editSecret, then reports it so the model reloads.
+func (m Model) editSecretCmd(pass, note string, change func(*mapping.Secret)) tea.Cmd {
+	deps := m.deps
 	return func() tea.Msg {
-		if err := write(); err != nil {
+		if err := editSecret(deps, pass, change); err != nil {
 			return errMsg{err}
 		}
 		return mutatedMsg{note}
 	}
 }
 
+// editSecret applies change to the secret for pass as the file has it now,
+// so edits made outside the TUI survive. It adds a local secret when none
+// exists and removes a local one left without env.
+func editSecret(deps Deps, pass string, change func(*mapping.Secret)) error {
+	current, err := deps.Mapping()
+	if err != nil {
+		return err
+	}
+	secret, found := current.Find(pass)
+	secret.Pass = pass
+	change(&secret)
+	switch {
+	case !found:
+		return mapping.AppendSecret(deps.MappingPath, secret)
+	case secret.Env == "" && secret.Ref == "":
+		return mapping.RemoveSecret(deps.MappingPath, pass)
+	}
+	return mapping.ReplaceSecret(deps.MappingPath, secret)
+}
+
 func (m Model) envPromptText() string {
-	name, secret, _ := m.envSelection()
+	name := m.pending
+	secret, _ := m.mapping.Find(name)
 	if m.prompt == promptEnvName {
 		return "Env name for " + name + "\n> " + m.input
 	}
@@ -124,10 +152,10 @@ func (m Model) envView() string {
 		"",
 		m.styles.dim.Render(fmt.Sprintf("  %-24s %-20s %-14s %-7s %s", "ENTRY", "ENV", "SCOPE", "STATE", "SOURCE")),
 	}
-	for i, row := range m.rows {
-		secret, ok := m.mapping.Find(row.Name)
+	for i, name := range m.envEntries() {
+		secret, ok := m.mapping.Find(name)
 		lines = append(lines, fmt.Sprintf("%s %-24s %-20s %-14s %s %s",
-			cursorMark(i == m.envCursor), row.Name, envName(secret), envScope(secret),
+			cursorMark(i == m.envCursor), name, envName(secret), envScope(secret),
 			m.envState(secret), envSource(secret, ok)))
 	}
 	return strings.Join(lines, "\n")

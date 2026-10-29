@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
+	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
 var spaceKey = tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
@@ -198,8 +199,50 @@ func TestEnvCursorStaysInRangeWhenRowsShrink(t *testing.T) {
 	f := newFixture(t)
 	m := envModel(t, f)
 	m.envCursor = 2
-	m = update(t, m, loadedMsg{mapping: m.mapping, rows: m.rows[:1]})
+	m = update(t, m, loadedMsg{vaultNames: []string{"alpha"}, rows: m.rows[:1]})
 	if m.envCursor != 0 {
 		t.Fatalf("envCursor = %d, want 0 after rows shrink to 1", m.envCursor)
+	}
+}
+
+func TestEnvListsLocalEntryWithoutPassFileAndHidesMissingOrphans(t *testing.T) {
+	f := newFixture(t)
+	writeMapping(t, f.deps.MappingPath, testMapping+"\n[[secret]]\npass = \"notes/wfi\"\nenv = \"WIFI\"\n")
+	f.state.Entries["gone"] = syncer.EntryState{Tag: "sync-1"}
+	m := envModel(t, f)
+	text := viewText(m)
+	if !strings.Contains(text, "notes/wfi") {
+		t.Fatalf("local entry without a pass file must be listed:\n%s", text)
+	}
+	if strings.Contains(text, "gone") {
+		t.Fatalf("entry in neither vault nor mapping must not be listed:\n%s", text)
+	}
+}
+
+func TestEnvPromptKeepsTargetWhenRowsChange(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	m = update(t, m, press("a"))
+	m = clearInput(m)
+	f.env.Insert(t, "aaa", "aaa-value")
+	m = update(t, m, loadCmd(f.deps)())
+	m = typeKeys(t, m, "ALPHA_RENAMED")
+	if secret, _ := findSecret(t, f, "alpha"); secret.Env != "ALPHA_RENAMED" {
+		t.Fatalf("alpha env = %q; the prompt changed target after a reload", secret.Env)
+	}
+	if _, ok := findSecret(t, f, "aaa"); ok {
+		t.Fatal("aaa must not get the env name")
+	}
+}
+
+func TestEnvToggleKeepsEditsMadeOutsideTheTUI(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	edited := strings.Replace(testMapping, "env = \"ALPHA_KEY\"\n", "env = \"ALPHA_KEY\"\nscope = \"none\"\n", 1)
+	writeMapping(t, f.deps.MappingPath, edited)
+	runKey(t, m, spaceKey)
+	secret, _ := findSecret(t, f, "alpha")
+	if secret.Scope != mapping.ScopeNone || secret.IsEnabled() {
+		t.Fatalf("alpha = %+v; want scope none kept and enabled false", secret)
 	}
 }
