@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
@@ -244,5 +245,26 @@ func TestEnvToggleKeepsEditsMadeOutsideTheTUI(t *testing.T) {
 	secret, _ := findSecret(t, f, "alpha")
 	if secret.Scope != mapping.ScopeNone || secret.IsEnabled() {
 		t.Fatalf("alpha = %+v; want scope none kept and enabled false", secret)
+	}
+}
+
+func TestEnvColumnsAlignWithLongValues(t *testing.T) {
+	f := newFixture(t)
+	writeMapping(t, f.deps.MappingPath, testMapping+"\n[[secret]]\npass = \"terminator-app-specific-password\"\nenv = \"APPLE_APP_SPECIFIC_PASSWORD\"\n")
+	lines := strings.Split(ansi.Strip(viewText(envModel(t, f))), "\n")
+	header, row := "", ""
+	for _, line := range lines {
+		if strings.Contains(line, "ENTRY") {
+			header = line
+		}
+		if strings.Contains(line, "terminator-app-specific-password") {
+			row = line
+		}
+	}
+	for _, column := range []struct{ title, value string }{{"ENV", "APPLE_APP"}, {"SCOPE", "global"}, {"SOURCE", "local"}} {
+		got := ansi.StringWidth(row[:strings.Index(row, column.value)])
+		if want := strings.Index(header, column.title); got != want {
+			t.Errorf("%s starts at %d, header at %d:\n%s\n%s", column.value, got, want, header, row)
+		}
 	}
 }

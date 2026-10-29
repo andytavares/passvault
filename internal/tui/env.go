@@ -1,11 +1,11 @@
 package tui
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 )
@@ -147,18 +147,35 @@ func (m Model) envPromptText() string {
 
 // envView renders one row per entry with its env variable settings.
 func (m Model) envView() string {
-	lines := []string{
-		m.styles.title.Render("Env vars") + m.styles.dim.Render(" ─ "+m.deps.MappingPath),
-		"",
-		m.styles.dim.Render(fmt.Sprintf("  %-24s %-20s %-14s %-7s %s", "ENTRY", "ENV", "SCOPE", "STATE", "SOURCE")),
-	}
+	rows := [][]string{{" ", "ENTRY", "ENV", "SCOPE", "STATE", "SOURCE"}}
 	for i, name := range m.envEntries() {
 		secret, ok := m.mapping.Find(name)
-		lines = append(lines, fmt.Sprintf("%s %-24s %-20s %-14s %s %s",
-			cursorMark(i == m.envCursor), name, envName(secret), envScope(secret),
-			m.envState(secret), envSource(secret, ok)))
+		rows = append(rows, []string{cursorMark(i == m.envCursor), name, envName(secret),
+			envScope(secret), m.envState(secret), envSource(secret, ok)})
 	}
-	return strings.Join(lines, "\n")
+	table := alignColumns(rows)
+	table[0] = m.styles.dim.Render(table[0])
+	title := m.styles.title.Render("Env vars") + m.styles.dim.Render(" ─ "+m.deps.MappingPath)
+	return strings.Join(append([]string{title, ""}, table...), "\n")
+}
+
+// alignColumns pads each cell to its column's widest visible value.
+func alignColumns(rows [][]string) []string {
+	widths := make([]int, len(rows[0]))
+	for _, row := range rows {
+		for column, cell := range row {
+			widths[column] = max(widths[column], lipgloss.Width(cell))
+		}
+	}
+	lines := make([]string, len(rows))
+	for i, row := range rows {
+		cells := make([]string, len(row))
+		for column, cell := range row {
+			cells[column] = cell + strings.Repeat(" ", widths[column]-lipgloss.Width(cell))
+		}
+		lines[i] = strings.TrimRight(strings.Join(cells, " "), " ")
+	}
+	return lines
 }
 
 func envName(secret mapping.Secret) string {
@@ -180,15 +197,14 @@ func envScope(secret mapping.Secret) string {
 	return "global"
 }
 
-// envState is padded to 7 columns; styling adds no visible width.
 func (m Model) envState(secret mapping.Secret) string {
 	switch {
 	case secret.Env == "":
-		return fmt.Sprintf("%-7s", "—")
+		return "—"
 	case secret.IsEnabled():
-		return m.styles.ok.Render("●") + " on   "
+		return m.styles.ok.Render("●") + " on"
 	}
-	return m.styles.warn.Render("○") + " off  "
+	return m.styles.warn.Render("○") + " off"
 }
 
 func envSource(secret mapping.Secret, hasSecret bool) string {
