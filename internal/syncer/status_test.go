@@ -49,3 +49,12 @@ func TestStatusLocalEntryIsUnmanagedRowWhenInVault(t *testing.T) {
 		t.Fatalf("rows = %+v, want [%+v]", rows, want)
 	}
 }
+
+func TestStatusLocalEntryWithStateIsNotOrphan(t *testing.T) {
+	m := mappingOf(mapping.Secret{Pass: "local", Env: "LOCAL", Scope: mapping.ScopeGlobal})
+	state := syncer.State{Entries: map[string]syncer.EntryState{"local": {}}}
+	rows := syncer.Status(m, state, []string{"local"})
+	if len(rows) != 1 || rows[0].Kind != syncer.KindUnmanaged {
+		t.Fatalf("rows = %+v, want one unmanaged row: sync never prunes a local entry", rows)
+	}
+}

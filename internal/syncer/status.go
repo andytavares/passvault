@@ -73,7 +73,7 @@ func vaultRows(m mapping.Mapping, state State, vaultNames []string) []StatusRow 
 			continue
 		}
 		row := StatusRow{Name: name, Kind: KindUnmanaged, Env: secret.Env, Scope: secret.Scope}
-		if entry, ok := state.Entries[name]; ok {
+		if entry, ok := state.Entries[name]; ok && !found { // sync never prunes a local entry
 			row.Kind, row.SyncedAt, row.Tag = KindOrphan, entry.SyncedAt, entry.Tag
 		}
 		rows = append(rows, row)

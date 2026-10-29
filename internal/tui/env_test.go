@@ -193,3 +193,13 @@ func TestEnvTabRendersRowsAndFooter(t *testing.T) {
 		}
 	}
 }
+
+func TestEnvCursorStaysInRangeWhenRowsShrink(t *testing.T) {
+	f := newFixture(t)
+	m := envModel(t, f)
+	m.envCursor = 2
+	m = update(t, m, loadedMsg{mapping: m.mapping, rows: m.rows[:1]})
+	if m.envCursor != 0 {
+		t.Fatalf("envCursor = %d, want 0 after rows shrink to 1", m.envCursor)
+	}
+}

@@ -105,7 +105,7 @@ func AppendSecret(path string, s Secret) error {
 // RemoveSecret deletes the [[secret]] table for pass from the file at path.
 // It edits the text, so comments and the other tables keep their bytes.
 func RemoveSecret(path, pass string) error {
-	return editTable(path, pass, func(lastTable bool) string { return "" })
+	return editTable(path, pass, "")
 }
 
 // ReplaceSecret rewrites the [[secret]] table for s.Pass with s. Comments
@@ -114,17 +114,14 @@ func ReplaceSecret(path string, s Secret) error {
 	if s.Scope == "" {
 		s.Scope = ScopeGlobal
 	}
-	return editTable(path, s.Pass, func(lastTable bool) string {
-		if lastTable {
-			return renderSecret(s)
-		}
-		return renderSecret(s) + "\n"
-	})
+	return editTable(path, s.Pass, renderSecret(s))
 }
 
 // editTable swaps the [[secret]] table for pass with the replacement text,
 // then writes the file only when the result still parses and validates.
-func editTable(path, pass string, replacement func(lastTable bool) string) error {
+// Blank and comment lines after the table's last key stay: they belong to
+// the next table. An empty replacement also drops the blank lines.
+func editTable(path, pass, replacement string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)
@@ -134,7 +131,15 @@ func editTable(path, pass string, replacement func(lastTable bool) string) error
 	if start < 0 {
 		return fmt.Errorf("%s: no [[secret]] with pass %q", path, pass)
 	}
-	edited := strings.Join(lines[:start], "") + replacement(end == len(lines)) + strings.Join(lines[end:], "")
+	bodyEnd := end
+	for bodyEnd > start+1 && isBlankOrComment(lines[bodyEnd-1]) {
+		bodyEnd--
+	}
+	trailing := lines[bodyEnd:]
+	for replacement == "" && len(trailing) > 0 && strings.TrimSpace(trailing[0]) == "" {
+		trailing = trailing[1:]
+	}
+	edited := strings.Join(lines[:start], "") + replacement + strings.Join(trailing, "")
 	if _, err := Parse([]byte(edited)); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
@@ -161,6 +166,11 @@ func tableBounds(lines []string, pass string) (start, end int) {
 		}
 	}
 	return start, len(lines)
+}
+
+func isBlankOrComment(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return trimmed == "" || strings.HasPrefix(trimmed, "#")
 }
 
 func nextHeader(lines []string, from int) int {

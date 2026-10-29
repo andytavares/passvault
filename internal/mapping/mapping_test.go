@@ -312,3 +312,27 @@ func TestReplaceSecretRejectsInvalidResult(t *testing.T) {
 		t.Fatalf("file changed on a rejected replace:\n%s", data)
 	}
 }
+
+func TestReplaceAndRemoveKeepNextTableComment(t *testing.T) {
+	head := "version = 1\n\n"
+	old := "[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\n\n"
+	tail := "# token for c\n[[secret]]\npass = \"c\"\nref = \"op://V/K/f\"\n"
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	if err := os.WriteFile(path, []byte(head+old+tail), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := ReplaceSecret(path, Secret{Pass: "b", Ref: "op://V/J/f", Env: "TOKEN_B"}); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if want := head + "[[secret]]\npass = \"b\"\nref = \"op://V/J/f\"\nenv = \"TOKEN_B\"\n\n" + tail; string(data) != want {
+		t.Fatalf("replace got:\n%q\nwant:\n%q", data, want)
+	}
+	if err := RemoveSecret(path, "b"); err != nil {
+		t.Fatal(err)
+	}
+	data, _ = os.ReadFile(path)
+	if string(data) != head+tail {
+		t.Fatalf("remove got:\n%q\nwant:\n%q", data, head+tail)
+	}
+}
