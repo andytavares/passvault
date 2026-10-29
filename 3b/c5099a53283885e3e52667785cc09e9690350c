@@ -1,0 +1,22 @@
+internal/tui/sync_test.go
+  s_e8033d4499a6f7::t_221c3ab2140bdf 129-146
+internal/tui/sync.go
+  s_e8033d4499a6f7::t_b0ffa89ff042fd 89-91
+  s_e8033d4499a6f7::t_7031d0f6eddb42 92-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3bc5099a53283885e3e52667785cc09e9690350c",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
