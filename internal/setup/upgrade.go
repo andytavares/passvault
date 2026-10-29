@@ -2,9 +2,9 @@ package setup
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/execx"
@@ -15,15 +15,19 @@ type UpgradeOptions struct {
 	NoTools bool
 }
 
-const versionLdflag = "-X github.com/atavares-klaviyo/pass-vault/internal/cli.Version="
+const (
+	defaultRepoURL = "https://github.com/andytavares/passvault.git"
+	versionLdflag  = "-X github.com/atavares-klaviyo/pass-vault/internal/cli.Version="
+)
 
 // Upgrade pulls the source clone, rebuilds and atomically swaps the binary,
 // then upgrades the brew toolset unless NoTools.
 func (in *Installer) Upgrade(ctx context.Context, opts UpgradeOptions) error {
 	if in.Manifest.SourceDir == "" {
-		return errors.New("unknown source clone; re-run install.sh")
-	}
-	if err := in.pullSource(ctx); err != nil {
+		if err := in.cloneSource(ctx); err != nil {
+			return err
+		}
+	} else if err := in.pullSource(ctx); err != nil {
 		return err
 	}
 	if err := in.rebuildBinary(ctx); err != nil {
@@ -33,6 +37,21 @@ func (in *Installer) Upgrade(ctx context.Context, opts UpgradeOptions) error {
 		in.upgradeTools(ctx)
 	}
 	return nil
+}
+
+// cloneSource clones the repo into the state dir and saves it as the source
+// clone, so later upgrades pull it.
+func (in *Installer) cloneSource(ctx context.Context) error {
+	url := in.RepoURL
+	if url == "" {
+		url = defaultRepoURL
+	}
+	dir := filepath.Join(in.Paths.StateDir, "source")
+	if _, err := in.Runner.Run(ctx, execx.Cmd{Name: "git", Args: []string{"clone", url, dir}}); err != nil {
+		return err
+	}
+	in.Manifest.SourceDir = dir
+	return in.Manifest.Save(in.Paths.Manifest())
 }
 
 func (in *Installer) pullSource(ctx context.Context) error {

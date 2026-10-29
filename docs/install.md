@@ -100,14 +100,13 @@ pvault upgrade --no-tools  # pvault only
 
 Upgrade:
 
-1. Runs `git pull --ff-only` in the clone recorded at install time.
+1. Runs `git pull --ff-only` in the clone recorded at install time. With no recorded
+   clone, it clones `https://github.com/andytavares/passvault.git` into
+   `~/.local/state/pvault/source` and records that one.
 2. Builds the new binary next to the old one and swaps it in with one rename.
 3. Runs `brew upgrade` for each of `pass`, `gnupg`, `pinentry-mac`, `1password-cli`
    that is installed (unless `--no-tools`). A failed upgrade is a warning, not an error.
 4. Runs the **new** binary's `pvault setup`, which applies any migrations.
-
-If upgrade says `unknown source clone; re-run install.sh`, the manifest has no clone
-path. Run `./install.sh` from a clone once.
 
 ## Uninstall
 

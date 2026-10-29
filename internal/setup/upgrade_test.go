@@ -31,7 +31,8 @@ func makeSourceClone(t *testing.T, env *testenv.Env) string {
 		}
 	}
 	run(t, source, []string{"git", "init"})
-	run(t, source, []string{"git", "commit", "--allow-empty", "-m", "init"})
+	run(t, source, []string{"git", "add", "-A"})
+	run(t, source, []string{"git", "commit", "-m", "init"})
 	run(t, env.Root, []string{"git", "clone", "--bare", source, remote})
 	run(t, source, []string{"git", "remote", "add", "origin", remote})
 	run(t, source, []string{"git", "fetch", "origin"})
@@ -94,11 +95,22 @@ func TestUpgradeRunsBrewUpgradeForInstalledTools(t *testing.T) {
 	}
 }
 
-func TestUpgradeWithoutSourceDirErrors(t *testing.T) {
+// With no saved clone, upgrade clones RepoURL into the state dir and keeps it.
+func TestUpgradeWithoutSourceDirClonesRepo(t *testing.T) {
 	env := testenv.New(t)
 	inst, _ := newInstaller(env, &setup.Manifest{})
-	err := inst.Upgrade(context.Background(), setup.UpgradeOptions{NoTools: true})
-	if err == nil || !strings.Contains(err.Error(), "unknown source clone") {
-		t.Fatalf("err %v", err)
+	inst.RepoURL = makeSourceClone(t, env)
+	if err := inst.Upgrade(context.Background(), setup.UpgradeOptions{NoTools: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(env.Paths.Binary()); err != nil {
+		t.Fatal("binary not swapped in")
+	}
+	saved, err := setup.LoadManifest(env.Paths.Manifest())
+	if want := filepath.Join(env.Paths.StateDir, "source"); err != nil || saved.SourceDir != want {
+		t.Fatalf("source_dir = %q, err %v; want %s", saved.SourceDir, err, want)
+	}
+	if err := inst.Upgrade(context.Background(), setup.UpgradeOptions{NoTools: true}); err != nil {
+		t.Fatalf("second upgrade must pull the saved clone: %v", err)
 	}
 }
