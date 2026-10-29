@@ -117,10 +117,9 @@ func ReplaceSecret(path string, s Secret) error {
 	return editTable(path, s.Pass, renderSecret(s))
 }
 
-// editTable swaps the [[secret]] table for pass with the replacement text,
-// then writes the file only when the result still parses and validates.
-// Blank and comment lines after the table's last key stay: they belong to
-// the next table. An empty replacement also drops the blank lines.
+// editTable swaps the [[secret]] table for pass and writes only a valid
+// result. Comments after the table's last key belong to the next table and
+// stay; an empty replacement also drops the blank lines after the table.
 func editTable(path, pass, replacement string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
