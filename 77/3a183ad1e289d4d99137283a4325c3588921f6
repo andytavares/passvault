@@ -1,0 +1,23 @@
+internal/mapping/types.go
+  s_e8033d4499a6f7::t_6418cf2d5cc15f 20-21,28-34
+internal/mapping/mapping.go
+  s_e8033d4499a6f7::t_6418cf2d5cc15f 108-127,137-138,141,191-193,256-259,269-271
+internal/mapping/mapping_test.go
+  s_e8033d4499a6f7::t_5fc1971d43dee8 48-49,249-314
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "773a183ad1e289d4d99137283a4325c3588921f6",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
