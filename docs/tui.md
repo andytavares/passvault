@@ -105,11 +105,12 @@ copy the value.
 
 Lists every entry with its env variable, scope, state (`● on`, `○ off`) and source
 (`1Password`, or `local` for an entry with no `ref`). Changes go to the mapping file;
-the pass entry itself is never changed. Scope and commands are edited in the
+only `n` writes a pass entry. Scope and commands are edited in the
 Mapping view (`e`).
 
 | Key | Action |
 |---|---|
+| `n` | create a pass entry with an env variable: type the entry name, the env name and the value. The entry gets a local `[[secret]]`. An existing entry name is refused; select it and press `a` |
 | `a` | add or rename the env variable (upper-cased for you). On an entry with no `[[secret]]`, adds a local one |
 | `space` | turn the variable on or off (`enabled = false`) |
 | `d` | remove the env variable: type its name to confirm. A local entry's `[[secret]]` is removed; a 1Password entry keeps syncing |
