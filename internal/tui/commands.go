@@ -159,11 +159,29 @@ func insertCmd(st *store.Store, name, value string) tea.Cmd {
 	}
 }
 
-// removeCmd deletes an entry, then reports it so the model reloads.
-func removeCmd(st *store.Store, name string) tea.Cmd {
+// removeCmd deletes an entry from the mapping, the store and the sync
+// state; otherwise sync re-creates it or it stays listed as an orphan.
+func removeCmd(deps Deps, name string) tea.Cmd {
 	return func() tea.Msg {
-		if err := st.Remove(context.Background(), name); err != nil {
+		if m, err := deps.Mapping(); err == nil {
+			if _, ok := m.Find(name); ok {
+				if err := mapping.RemoveSecret(deps.MappingPath, name); err != nil {
+					return errMsg{err}
+				}
+			}
+		}
+		if err := deps.Store.Remove(context.Background(), name); err != nil {
 			return errMsg{err}
+		}
+		state, err := deps.State()
+		if err != nil {
+			return errMsg{err}
+		}
+		if _, ok := state.Entries[name]; ok {
+			delete(state.Entries, name)
+			if err := deps.SaveState(state); err != nil {
+				return errMsg{err}
+			}
 		}
 		return mutatedMsg{"deleted " + name}
 	}
