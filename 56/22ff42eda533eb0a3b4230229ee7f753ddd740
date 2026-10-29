@@ -1,0 +1,31 @@
+internal/mapping/mapping_test.go
+  s_e8033d4499a6f7::t_ae93e1ba2bc4c4 315-338
+internal/syncer/status_test.go
+  s_e8033d4499a6f7::t_ae93e1ba2bc4c4 52-60
+internal/mapping/mapping.go
+  s_e8033d4499a6f7::t_28a224b674ea58 108,117,122-124,134-138,140-142,171-173
+  s_e8033d4499a6f7::t_1c584e08e7736c 139
+  s_e8033d4499a6f7::t_16a925987d171b 174-175
+internal/syncer/status.go
+  s_e8033d4499a6f7::t_28a224b674ea58 76
+internal/tui/env_test.go
+  s_e8033d4499a6f7::t_3ace39a366e858 196-205
+internal/tui/vault.go
+  s_e8033d4499a6f7::t_6412317f0e03d5 32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5622ff42eda533eb0a3b4230229ee7f753ddd740",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
