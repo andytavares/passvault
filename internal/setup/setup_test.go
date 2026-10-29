@@ -321,3 +321,17 @@ func TestNonDarwinFails(t *testing.T) {
 		t.Fatal("no error")
 	}
 }
+
+// pvault upgrade runs setup without --source; the saved clone path must stay.
+func TestSetupWithoutSourceKeepsSavedSourceDir(t *testing.T) {
+	env := testenv.New(t)
+	inst, _ := newInstaller(env, &setup.Manifest{SourceDir: "/clone"})
+	inst.SourceDir = ""
+	if err := inst.Setup(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	saved, err := setup.LoadManifest(env.Paths.Manifest())
+	if err != nil || saved.SourceDir != "/clone" {
+		t.Fatalf("source_dir = %q, err %v; want /clone kept", saved.SourceDir, err)
+	}
+}

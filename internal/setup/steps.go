@@ -99,7 +99,9 @@ func (in *Installer) Setup(ctx context.Context) error {
 		}
 	}
 	if !in.DryRun {
-		in.Manifest.SourceDir = in.SourceDir
+		if in.SourceDir != "" {
+			in.Manifest.SourceDir = in.SourceDir
+		}
 		if in.Manifest.InstalledAt.IsZero() {
 			in.Manifest.InstalledAt = in.now()
 		}
