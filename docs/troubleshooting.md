@@ -12,7 +12,6 @@ Start with `pvault doctor`. It checks most of what can go wrong.
 | `store was encrypted to a different key at REV` | the store was re-encrypted (`pass init` with a new key) after `REV` | roll back only to revisions after the key change |
 | `version N is newer than this pvault supports, run pvault upgrade` | the mapping came from a newer pvault | `pvault upgrade` |
 | `unknown keys: …` | a typo in the mapping | fix the key name; see [mapping.md](mapping.md#fields) |
-| `unknown source clone; re-run install.sh` (upgrade) | the manifest has no clone path | run `./install.sh` from a clone |
 | `pvault needs a GPG key` | you answered no to key creation | run `pvault setup` again and answer `y`, or create a key yourself and rerun setup |
 | `found begin marker without end marker` | a managed block in `~/.zshrc` or `gpg-agent.conf` was half deleted | remove the leftover `# >>> pvault >>>` or `# <<< pvault <<<` line, rerun `pvault setup` |
 | `vault deletion aborted: … does not match …` | the typed path for `--purge-vault` was wrong | type the exact store path shown, full or `~/…` |

@@ -68,6 +68,9 @@ type Installer struct {
 	Out      Reporter
 	// SourceDir is the clone install.sh built from; the manifest stores it.
 	SourceDir string
+	// RepoURL is cloned when the manifest has no source clone; empty means
+	// the GitHub repo.
+	RepoURL string
 	// GOOS and GenerateKey are fields so tests can replace them.
 	GOOS        string
 	GenerateKey func(ctx context.Context, userID string) error
