@@ -263,3 +263,12 @@ func TestEnterHidesARevealedValue(t *testing.T) {
 		t.Error("enter on a revealed value should hide it without decrypting again")
 	}
 }
+
+func TestMappingTabListsLoadedSecrets(t *testing.T) {
+	m := newFixture(t).loadModel(t)
+	m.active = viewMapping
+	text := viewText(m)
+	if !strings.Contains(text, "op://Private/Alpha/credential") || strings.Contains(text, "no entries") {
+		t.Fatalf("mapping tab must list the loaded secrets:\n%s", text)
+	}
+}
