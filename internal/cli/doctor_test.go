@@ -82,3 +82,15 @@ func TestDoctorMissingStoreFails(t *testing.T) {
 		t.Fatalf("output missing failure:\n%s", f.out.String())
 	}
 }
+
+func TestDoctorSkipsGlobalWarningForDisabledEntry(t *testing.T) {
+	f := healthyEnv(t)
+	off := false
+	f.writeMapping(t, mapping.Secret{Pass: "work/token", Ref: "op://Private/T/token", Env: "TOKEN", Enabled: &off})
+	if err := f.run(f.app.doctorCommand()); err != nil {
+		t.Fatalf("doctor: %v\n%s", err, f.out.String())
+	}
+	if strings.Contains(f.out.String(), "exported to every child process") {
+		t.Fatalf("disabled entry warned:\n%s", f.out.String())
+	}
+}

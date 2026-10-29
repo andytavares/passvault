@@ -34,7 +34,7 @@ func RenderScript(ctx context.Context, m mapping.Mapping, read ReadSecret) (stri
 	var lines []string
 	var warnings []Warning
 	for _, secret := range m.Secrets {
-		if secret.Scope != mapping.ScopeGlobal || secret.Env == "" {
+		if secret.Scope != mapping.ScopeGlobal || secret.Env == "" || !secret.IsEnabled() {
 			continue
 		}
 		value, err := read(ctx, secret.Pass)
@@ -97,7 +97,7 @@ func selectSecrets(m mapping.Mapping, names []string) ([]mapping.Secret, error) 
 	if len(names) == 0 {
 		var secrets []mapping.Secret
 		for _, secret := range m.Secrets {
-			if secret.Env != "" {
+			if secret.Env != "" && secret.IsEnabled() {
 				secrets = append(secrets, secret)
 			}
 		}
@@ -109,7 +109,7 @@ func selectSecrets(m mapping.Mapping, names []string) ([]mapping.Secret, error) 
 		if !ok {
 			return nil, fmt.Errorf("unknown pass entry: %s", name)
 		}
-		if secret.Env != "" {
+		if secret.Env != "" && secret.IsEnabled() {
 			secrets = append(secrets, secret)
 		}
 	}
@@ -121,7 +121,7 @@ func commandOrder(m mapping.Mapping) []string {
 	seen := map[string]bool{}
 	var commands []string
 	for _, secret := range m.Secrets {
-		if secret.Scope != mapping.ScopeCommand || secret.Env == "" {
+		if secret.Scope != mapping.ScopeCommand || secret.Env == "" || !secret.IsEnabled() {
 			continue
 		}
 		for _, command := range secret.Commands {
@@ -140,7 +140,7 @@ func commandOrder(m mapping.Mapping) []string {
 func commandFunction(command string, m mapping.Mapping) string {
 	var assignments []string
 	for _, secret := range m.Secrets {
-		if secret.Scope != mapping.ScopeCommand || secret.Env == "" {
+		if secret.Scope != mapping.ScopeCommand || secret.Env == "" || !secret.IsEnabled() {
 			continue
 		}
 		for _, c := range secret.Commands {

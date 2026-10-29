@@ -219,3 +219,27 @@ func TestRunEnvRejectsNULByteNamingTheEntry(t *testing.T) {
 		t.Fatalf("err = %v, want one naming the entry and NUL", err)
 	}
 }
+
+func TestDisabledSecretsAreSkipped(t *testing.T) {
+	off := false
+	m := mapping.Mapping{Secrets: []mapping.Secret{
+		{Pass: "a", Env: "A", Scope: mapping.ScopeGlobal},
+		{Pass: "off", Env: "OFF", Scope: mapping.ScopeGlobal, Enabled: &off},
+		{Pass: "offcmd", Env: "OFFCMD", Scope: mapping.ScopeCommand, Commands: []string{"gh"}, Enabled: &off},
+	}}
+	read := readValues(map[string][]byte{"a": []byte("1"), "off": []byte("2"), "offcmd": []byte("3")})
+
+	script, warnings := RenderScript(context.Background(), m, read)
+	if len(warnings) != 0 || script != "export A='1'\n" {
+		t.Fatalf("script = %q, warnings = %v", script, warnings)
+	}
+
+	pairs, err := RunEnv(context.Background(), m, RunRequest{Names: nil, Read: read})
+	if err != nil || strings.Join(pairs, ",") != "A=1" {
+		t.Fatalf("all names: pairs = %v, err = %v", pairs, err)
+	}
+	pairs, err = RunEnv(context.Background(), m, RunRequest{Names: []string{"off"}, Read: read})
+	if err != nil || len(pairs) != 0 {
+		t.Fatalf("named: pairs = %v, err = %v", pairs, err)
+	}
+}

@@ -51,6 +51,9 @@ func (f *cliFixture) writeMapping(t *testing.T, secrets ...mapping.Secret) {
 			content += "env = \"" + secret.Env + "\"\n"
 		}
 		content += "scope = \"" + scope + "\"\n"
+		if secret.Enabled != nil && !*secret.Enabled {
+			content += "enabled = false\n"
+		}
 		for _, command := range secret.Commands {
 			content += "commands = [\"" + command + "\"]\n"
 		}
