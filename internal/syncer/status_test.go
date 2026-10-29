@@ -3,6 +3,7 @@ package syncer_test
 import (
 	"testing"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
@@ -34,5 +35,26 @@ func TestStatusClassifiesFourKinds(t *testing.T) {
 	mapped := rows[0]
 	if mapped.Name != "mapped" || mapped.Tag != "sync-1" || !mapped.SyncedAt.Equal(fixedNow) {
 		t.Fatalf("mapped row = %+v", mapped)
+	}
+}
+
+func TestStatusLocalEntryIsUnmanagedRowWhenInVault(t *testing.T) {
+	m := mappingOf(
+		mapping.Secret{Pass: "local", Env: "LOCAL", Scope: mapping.ScopeGlobal},
+		mapping.Secret{Pass: "absent", Env: "ABSENT", Scope: mapping.ScopeGlobal},
+	)
+	rows := syncer.Status(m, syncer.State{Entries: map[string]syncer.EntryState{}}, []string{"local"})
+	want := syncer.StatusRow{Name: "local", Kind: syncer.KindUnmanaged, Env: "LOCAL", Scope: mapping.ScopeGlobal}
+	if len(rows) != 1 || rows[0] != want {
+		t.Fatalf("rows = %+v, want [%+v]", rows, want)
+	}
+}
+
+func TestStatusLocalEntryWithStateIsNotOrphan(t *testing.T) {
+	m := mappingOf(mapping.Secret{Pass: "local", Env: "LOCAL", Scope: mapping.ScopeGlobal})
+	state := syncer.State{Entries: map[string]syncer.EntryState{"local": {}}}
+	rows := syncer.Status(m, state, []string{"local"})
+	if len(rows) != 1 || rows[0].Kind != syncer.KindUnmanaged {
+		t.Fatalf("rows = %+v, want one unmanaged row: sync never prunes a local entry", rows)
 	}
 }

@@ -60,6 +60,8 @@ func (m Model) body() string {
 		return m.historyView()
 	case viewMapping:
 		return m.mappingView()
+	case viewEnv:
+		return m.envView()
 	}
 	return ""
 }

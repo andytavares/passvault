@@ -209,7 +209,7 @@ func TestViewIsFullscreenWithTabsAndDividers(t *testing.T) {
 	if len(lines) != m.height {
 		t.Errorf("rendered %d lines, want the full height %d", len(lines), m.height)
 	}
-	for _, want := range []string{"Vault", "Sync", "History", "Mapping", strings.Repeat("─", m.width), "│"} {
+	for _, want := range []string{"Vault", "Sync", "History", "Mapping", "Env", strings.Repeat("─", m.width), "│"} {
 		if !strings.Contains(view.Content, want) {
 			t.Errorf("view missing %q:\n%s", want, view.Content)
 		}
@@ -227,7 +227,9 @@ func TestTabAndArrowsSwitchViews(t *testing.T) {
 		{"right", viewHistory},
 		{"shift+tab", viewSync},
 		{"left", viewVault},
+		{"left", viewEnv},
 		{"left", viewMapping},
+		{"tab", viewEnv},
 		{"tab", viewVault},
 	}
 	for _, step := range steps {
@@ -261,5 +263,14 @@ func TestEnterHidesARevealedValue(t *testing.T) {
 	next, cmd := m.Update(press("enter"))
 	if next.(Model).reveal != nil || cmd != nil {
 		t.Error("enter on a revealed value should hide it without decrypting again")
+	}
+}
+
+func TestMappingTabListsLoadedSecrets(t *testing.T) {
+	m := newFixture(t).loadModel(t)
+	m.active = viewMapping
+	text := viewText(m)
+	if !strings.Contains(text, "op://Private/Alpha/credential") || strings.Contains(text, "no entries") {
+		t.Fatalf("mapping tab must list the loaded secrets:\n%s", text)
 	}
 }

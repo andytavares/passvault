@@ -28,10 +28,10 @@ var glyphs = map[syncer.StatusKind]string{
 
 // applyLoaded stores the fresh rows and keeps the cursor in range.
 func (m Model) applyLoaded(msg loadedMsg) (tea.Model, tea.Cmd) {
-	m.rows, m.state, m.opOK, m.mapErrors = msg.rows, msg.state, msg.opOK, msg.mapErr
-	if m.cursor >= len(m.rows) {
-		m.cursor = max(0, len(m.rows)-1)
-	}
+	m.mapping, m.rows, m.state, m.opOK, m.mapErrors = msg.mapping, msg.rows, msg.state, msg.opOK, msg.mapErr
+	m.cursor = clampIndex(m.cursor, len(m.rows))
+	m.vaultNames = msg.vaultNames
+	m.envCursor = clampIndex(m.envCursor, len(m.envEntries()))
 	m.err = nil
 	if row, ok := m.selectedRow(); ok {
 		return m, historyCmd(m.deps.Store, row.Name)

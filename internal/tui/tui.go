@@ -61,11 +61,12 @@ const (
 	viewSync
 	viewHistory
 	viewMapping
+	viewEnv
 	viewCount
 )
 
 // viewNames label the tab bar, in view order.
-var viewNames = [viewCount]string{"Vault", "Sync", "History", "Mapping"}
+var viewNames = [viewCount]string{"Vault", "Sync", "History", "Mapping", "Env"}
 
 // promptKind is the active modal input, if any.
 type promptKind int
@@ -78,6 +79,8 @@ const (
 	promptRollback
 	promptAddName
 	promptAddEnv
+	promptEnvName
+	promptEnvRemove
 )
 
 // pickerStep tracks the add-from-1Password picker stages.
@@ -109,12 +112,13 @@ type Model struct {
 	err     error
 	opOK    bool
 
-	mapping mapping.Mapping
-	state   syncer.State
-	rows    []syncer.StatusRow
-	cursor  int
-	history []store.Revision
-	reveal  *revealState
+	mapping    mapping.Mapping
+	vaultNames []string
+	state      syncer.State
+	rows       []syncer.StatusRow
+	cursor     int
+	history    []store.Revision
+	reveal     *revealState
 
 	prompt  promptKind
 	input   string
@@ -132,6 +136,7 @@ type Model struct {
 	planTarget   string
 
 	mapCursor    int
+	envCursor    int
 	mapErrors    string
 	picker       pickerStep
 	pickerItems  []opcli.Item
@@ -306,6 +311,8 @@ func (m Model) updateViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.updateHistory(msg)
 	case viewMapping:
 		return m.updateMapping(msg)
+	case viewEnv:
+		return m.updateEnv(msg)
 	}
 	return m, nil
 }

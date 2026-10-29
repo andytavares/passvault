@@ -133,7 +133,7 @@ func (a *app) mappingChecks() []check {
 	}
 	checks := []check{{"✓", "mapping.toml", fmt.Sprintf("%d entries, valid", len(m.Secrets))}}
 	for _, secret := range m.Secrets {
-		if secret.Scope == mapping.ScopeGlobal && secret.Env != "" {
+		if secret.Scope == mapping.ScopeGlobal && secret.Env != "" && secret.IsEnabled() {
 			checks = append(checks, check{"!", "global scope", secret.Env + " exported to every child process"})
 		}
 	}

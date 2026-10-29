@@ -447,3 +447,21 @@ func TestSyncTwiceInOneSecondGivesEachRunItsOwnTag(t *testing.T) {
 		t.Fatalf("tags = %q, %q", first.Tag, second.Tag)
 	}
 }
+
+func TestCheckSkipsLocalEntries(t *testing.T) {
+	env := newEnv(t)
+	env.Insert(t, "local", "value")
+	m := mappingOf(
+		mapping.Secret{Pass: "local", Env: "LOCAL", Scope: mapping.ScopeGlobal},
+		secret("add", "op://Private/Item/add"),
+	)
+	env.SetOp(t, "op://Private/Item/add", "added")
+	s, _ := newSyncer(t, env, nil)
+	entries, err := s.Check(context.Background(), m, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Secret.Pass != "add" {
+		t.Fatalf("entries = %+v, want only add", entries)
+	}
+}

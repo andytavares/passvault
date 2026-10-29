@@ -51,6 +51,9 @@ func (f *cliFixture) writeMapping(t *testing.T, secrets ...mapping.Secret) {
 			content += "env = \"" + secret.Env + "\"\n"
 		}
 		content += "scope = \"" + scope + "\"\n"
+		if secret.Enabled != nil && !*secret.Enabled {
+			content += "enabled = false\n"
+		}
 		for _, command := range secret.Commands {
 			content += "commands = [\"" + command + "\"]\n"
 		}
@@ -258,5 +261,17 @@ func TestSyncSignedOutIncludesHint(t *testing.T) {
 	err := f.run(f.app.syncCommand())
 	if err == nil || !strings.Contains(err.Error(), "Integrate with 1Password CLI") {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestSyncCountsOnlyEntriesWith1PasswordRef(t *testing.T) {
+	f := newCliFixture(t, "")
+	f.env.Insert(t, "notes/wifi", "wifi-value")
+	f.writeMapping(t, pagerduty, mapping.Secret{Pass: "notes/wifi", Env: "WIFI_PASSWORD"})
+	if err := f.syncOnce(t, "pd-secret-123"); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if !strings.Contains(f.out.String(), "Reading 1 entries from 1Password") {
+		t.Fatalf("local entry counted:\n%s", f.out.String())
 	}
 }

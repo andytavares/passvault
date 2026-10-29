@@ -43,10 +43,13 @@ func Status(m mapping.Mapping, state State, vaultNames []string) []StatusRow {
 }
 
 // mappedRows covers mapping secrets: Mapped when in the vault, else
-// MappedMissing.
+// MappedMissing. Local entries (no Ref) are left to vaultRows.
 func mappedRows(m mapping.Mapping, state State, vaultNames []string) []StatusRow {
 	var rows []StatusRow
 	for _, secret := range m.Secrets {
+		if secret.Ref == "" {
+			continue
+		}
 		row := StatusRow{Name: secret.Pass, Env: secret.Env, Scope: secret.Scope, Kind: KindMappedMissing}
 		if containsName(vaultNames, secret.Pass) {
 			row.Kind = KindMapped
@@ -60,15 +63,17 @@ func mappedRows(m mapping.Mapping, state State, vaultNames []string) []StatusRow
 }
 
 // vaultRows covers vault entries outside the mapping: Orphan when the state
-// synced them once, else Unmanaged (made by hand, never touched).
+// synced them once, else Unmanaged (made by hand, never touched). A local
+// mapping entry counts as outside the mapping and keeps its Env and Scope.
 func vaultRows(m mapping.Mapping, state State, vaultNames []string) []StatusRow {
 	var rows []StatusRow
 	for _, name := range vaultNames {
-		if _, ok := m.Find(name); ok {
+		secret, found := m.Find(name)
+		if found && secret.Ref != "" {
 			continue
 		}
-		row := StatusRow{Name: name, Kind: KindUnmanaged}
-		if entry, ok := state.Entries[name]; ok {
+		row := StatusRow{Name: name, Kind: KindUnmanaged, Env: secret.Env, Scope: secret.Scope}
+		if entry, ok := state.Entries[name]; ok && !found { // sync never prunes a local entry
 			row.Kind, row.SyncedAt, row.Tag = KindOrphan, entry.SyncedAt, entry.Tag
 		}
 		rows = append(rows, row)

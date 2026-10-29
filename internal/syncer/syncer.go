@@ -135,6 +135,9 @@ func (s *Syncer) Check(ctx context.Context, m mapping.Mapping, only []string) ([
 		if len(only) > 0 && !containsName(only, secret.Pass) {
 			continue
 		}
+		if secret.Ref == "" { // local entry: never read from 1Password
+			continue
+		}
 		entries = append(entries, s.checkEntry(ctx, secret))
 	}
 	return append(entries, s.orphanEntries(m)...), nil

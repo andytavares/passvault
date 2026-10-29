@@ -5,7 +5,7 @@ gives it back when you quit.
 
 ```
  pvault ─ /Users/you/.password-store ─ 3 mapped · 1 unmanaged · 0 orphan  op ✓
-  Vault   Sync   History   Mapping
+  Vault   Sync   History   Mapping   Env
 ──────────────────────────────────────────────────────────────────────────
 Entries                                           │ pagerduty-api-key
 ▸ pagerduty-api-key            ● synced 2h        │
@@ -100,6 +100,21 @@ Add from 1Password:
 
 The entry is appended with scope `global`. `esc` closes the picker. Run a sync to
 copy the value.
+
+## Env
+
+Lists every entry with its env variable, scope, state (`● on`, `○ off`) and source
+(`1Password`, or `local` for an entry with no `ref`). Changes go to the mapping file;
+the pass entry itself is never changed. Scope and commands are edited in the
+Mapping view (`e`).
+
+| Key | Action |
+|---|---|
+| `a` | add or rename the env variable (upper-cased for you). On an entry with no `[[secret]]`, adds a local one |
+| `space` | turn the variable on or off (`enabled = false`) |
+| `d` | remove the env variable: type its name to confirm. A local entry's `[[secret]]` is removed; a 1Password entry keeps syncing |
+
+Open a new shell to load the change; a running shell keeps the variables it already has.
 
 ## Known issues
 

@@ -15,7 +15,7 @@ const pickerVaultsJSON = `[
 // openPicker switches to Mapping, presses n and applies the item list.
 func openPicker(t *testing.T, m Model) Model {
 	t.Helper()
-	m = update(t, m, press("shift+tab"))
+	m = update(t, update(t, m, press("shift+tab")), press("shift+tab"))
 	m = update(t, m, press("n"))
 	return update(t, m, itemsCmd(m.deps.Items)())
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
@@ -40,7 +41,7 @@ func (a *app) runSync(ctx context.Context, flags syncFlags) error {
 	if err := client.SignedIn(ctx); err != nil {
 		return err
 	}
-	fmt.Fprintf(a.out, "Reading %d entries from 1Password (Touch ID may prompt)\n", len(m.Secrets))
+	fmt.Fprintf(a.out, "Reading %d entries from 1Password (Touch ID may prompt)\n", countWithRef(m))
 	sync, err := a.newSyncer(client, flags.skipConflicts)
 	if err != nil {
 		return err
@@ -129,4 +130,15 @@ func reportLine(entry syncer.Entry) string {
 		return fmt.Sprintf("  ✕ %s  failed: %v", name, entry.Err)
 	}
 	return "  · " + name
+}
+
+// countWithRef counts the secrets sync reads; local entries have no ref.
+func countWithRef(m mapping.Mapping) int {
+	count := 0
+	for _, secret := range m.Secrets {
+		if secret.Ref != "" {
+			count++
+		}
+	}
+	return count
 }

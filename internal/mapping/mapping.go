@@ -105,6 +105,22 @@ func AppendSecret(path string, s Secret) error {
 // RemoveSecret deletes the [[secret]] table for pass from the file at path.
 // It edits the text, so comments and the other tables keep their bytes.
 func RemoveSecret(path, pass string) error {
+	return editTable(path, pass, "")
+}
+
+// ReplaceSecret rewrites the [[secret]] table for s.Pass with s. Comments
+// inside that table are lost; the rest of the file keeps its bytes.
+func ReplaceSecret(path string, s Secret) error {
+	if s.Scope == "" {
+		s.Scope = ScopeGlobal
+	}
+	return editTable(path, s.Pass, renderSecret(s))
+}
+
+// editTable swaps the [[secret]] table for pass and writes only a valid
+// result. Comments after the table's last key belong to the next table and
+// stay; an empty replacement also drops the blank lines after the table.
+func editTable(path, pass, replacement string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("%s: %w", path, err)
@@ -114,11 +130,19 @@ func RemoveSecret(path, pass string) error {
 	if start < 0 {
 		return fmt.Errorf("%s: no [[secret]] with pass %q", path, pass)
 	}
-	kept := strings.Join(append(lines[:start:start], lines[end:]...), "")
-	if _, err := Parse([]byte(kept)); err != nil {
+	bodyEnd := end
+	for bodyEnd > start+1 && isBlankOrComment(lines[bodyEnd-1]) {
+		bodyEnd--
+	}
+	trailing := lines[bodyEnd:]
+	for replacement == "" && len(trailing) > 0 && strings.TrimSpace(trailing[0]) == "" {
+		trailing = trailing[1:]
+	}
+	edited := strings.Join(lines[:start], "") + replacement + strings.Join(trailing, "")
+	if _, err := Parse([]byte(edited)); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
-	return os.WriteFile(path, []byte(kept), 0o600)
+	return os.WriteFile(path, []byte(edited), 0o600)
 }
 
 // tableBounds returns the line range of the [[secret]] table for pass,
@@ -141,6 +165,11 @@ func tableBounds(lines []string, pass string) (start, end int) {
 		}
 	}
 	return start, len(lines)
+}
+
+func isBlankOrComment(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	return trimmed == "" || strings.HasPrefix(trimmed, "#")
 }
 
 func nextHeader(lines []string, from int) int {
@@ -168,13 +197,23 @@ func (s Secret) problems(index int) []error {
 	case strings.HasSuffix(s.Pass, ".gpg"):
 		add("pass must not have a .gpg suffix")
 	}
-	if !strings.HasPrefix(s.Ref, "op://") {
-		add("ref must start with op://")
+	problems = append(problems, s.refEnvProblems(at)...)
+	return append(problems, s.scopeProblems(at)...)
+}
+
+// refEnvProblems checks ref and env; a local entry (no ref) needs env.
+func (s Secret) refEnvProblems(at string) []error {
+	var problems []error
+	switch {
+	case s.Ref == "" && s.Env == "":
+		problems = append(problems, fmt.Errorf("%s: an entry without ref needs env", at))
+	case s.Ref != "" && !strings.HasPrefix(s.Ref, "op://"):
+		problems = append(problems, fmt.Errorf("%s: ref must start with op://", at))
 	}
 	if s.Env != "" && !envPattern.MatchString(s.Env) {
-		add("env %q must match [A-Z_][A-Z0-9_]*", s.Env)
+		problems = append(problems, fmt.Errorf("%s: env %q must match [A-Z_][A-Z0-9_]*", at, s.Env))
 	}
-	return append(problems, s.scopeProblems(at)...)
+	return problems
 }
 
 func (s Secret) scopeProblems(at string) []error {
@@ -231,7 +270,10 @@ func duplicates(secrets []Secret) []error {
 
 func renderSecret(s Secret) string {
 	var lines []string
-	lines = append(lines, "[[secret]]", fmt.Sprintf("pass = %q", s.Pass), fmt.Sprintf("ref = %q", s.Ref))
+	lines = append(lines, "[[secret]]", fmt.Sprintf("pass = %q", s.Pass))
+	if s.Ref != "" {
+		lines = append(lines, fmt.Sprintf("ref = %q", s.Ref))
+	}
 	if s.Env != "" {
 		lines = append(lines, fmt.Sprintf("env = %q", s.Env))
 	}
@@ -240,6 +282,9 @@ func renderSecret(s Secret) string {
 	}
 	if len(s.Commands) > 0 {
 		lines = append(lines, fmt.Sprintf("commands = [%s]", quoteJoin(s.Commands)))
+	}
+	if !s.IsEnabled() {
+		lines = append(lines, "enabled = false")
 	}
 	return strings.Join(lines, "\n") + "\n"
 }

@@ -17,13 +17,21 @@ const (
 	ScopeNone Scope = "none"
 )
 
-// Secret is one [[secret]] table.
+// Secret is one [[secret]] table. An empty Ref marks a local entry: sync
+// never touches it, it exists only to put a pass entry in the environment.
 type Secret struct {
 	Pass     string   `toml:"pass"`
 	Ref      string   `toml:"ref"`
 	Env      string   `toml:"env"`
 	Scope    Scope    `toml:"scope"`
 	Commands []string `toml:"commands"`
+	Enabled  *bool    `toml:"enabled"`
+}
+
+// IsEnabled reports whether the env variable reaches the shell; a missing
+// enabled key means true.
+func (s Secret) IsEnabled() bool {
+	return s.Enabled == nil || *s.Enabled
 }
 
 // Mapping is the whole file.

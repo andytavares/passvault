@@ -123,7 +123,7 @@ const pickerItemJSON = `{
 // walkPicker drives the picker from item list to the env prompt.
 func walkPicker(t *testing.T, m Model) Model {
 	t.Helper()
-	m = update(t, m, press("shift+tab"))
+	m = update(t, update(t, m, press("shift+tab")), press("shift+tab"))
 	m = update(t, m, press("n"))
 	m = update(t, m, itemsCmd(m.deps.Items)())
 	if len(m.pickerItems) != 1 {
