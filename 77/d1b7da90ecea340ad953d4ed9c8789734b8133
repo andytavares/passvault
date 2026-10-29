@@ -1,0 +1,26 @@
+internal/setup/upgrade_test.go
+  s_e8033d4499a6f7::t_1e2f1cafe5ef4e 34-35,98-99,102-114
+internal/setup/upgrade.go
+  s_e8033d4499a6f7::t_c304d8d0eddc7a 7,18-21,27-30,42-54
+  s_e8033d4499a6f7::t_ed2ac890af7066 55-56
+internal/setup/steps.go
+  s_e8033d4499a6f7::t_c304d8d0eddc7a 71-73
+docs/install.md
+  s_e8033d4499a6f7::t_830fc0757dedff 103-105
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77d1b7da90ecea340ad953d4ed9c8789734b8133",
+  "prompts": {},
+  "sessions": {
+    "s_e8033d4499a6f7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ae332145-1503-41e8-8af2-c1f18f647975",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
