@@ -1,0 +1,60 @@
+internal/cli/app.go
+  s_83fefd5b0a3f5a::t_cb53298a88944a 12,45-58,70-77,87
+  s_83fefd5b0a3f5a::t_76b3eee69af411 29-30
+internal/cli/audit_test.go
+  s_83fefd5b0a3f5a::t_1a7512fe9680f4 1-128
+internal/audit/audit.go
+  s_83fefd5b0a3f5a::t_1def6ecc6a31b0 59
+  s_83fefd5b0a3f5a::t_0878b1b950aef5 71-73
+internal/store/store.go
+  s_83fefd5b0a3f5a::t_0878b1b950aef5 7,39-40,42-44,60,63-87,92-103,131-133
+  s_83fefd5b0a3f5a::t_1def6ecc6a31b0 14,20-22,41
+internal/shellenv/shellenv.go
+  s_83fefd5b0a3f5a::t_76b3eee69af411 30-36,40,47,169
+  s_83fefd5b0a3f5a::t_0878b1b950aef5 59,147,155,161-168
+internal/store/git.go
+  s_83fefd5b0a3f5a::t_0878b1b950aef5 12-13,144-147,154-168
+internal/tui/tui_test.go
+  s_83fefd5b0a3f5a::t_1a7512fe9680f4 12,175-195
+  s_83fefd5b0a3f5a::t_d3a8e0282bf673 196-197
+internal/cli/root.go
+  s_83fefd5b0a3f5a::t_cb53298a88944a 20-26
+internal/cli/get.go
+  s_83fefd5b0a3f5a::t_76b3eee69af411 1-3,6,9-12,14-17,32
+  s_83fefd5b0a3f5a::t_cb53298a88944a 4-5,7-8,13,18-31
+internal/store/git_test.go
+  s_83fefd5b0a3f5a::t_99cfe8feebf433 11,37,287-325
+internal/cli/env.go
+  s_83fefd5b0a3f5a::t_76b3eee69af411 4,9,32-37
+internal/cli/run.go
+  s_83fefd5b0a3f5a::t_cb53298a88944a 34
+  s_83fefd5b0a3f5a::t_76b3eee69af411 4,10,35-40
+internal/tui/commands.go
+  s_83fefd5b0a3f5a::t_76b3eee69af411 10
+  s_83fefd5b0a3f5a::t_1def6ecc6a31b0 98
+internal/syncer/syncer.go
+  s_83fefd5b0a3f5a::t_1def6ecc6a31b0 22,160,312
+  s_83fefd5b0a3f5a::t_76b3eee69af411 11
+internal/shellenv/shellenv_test.go
+  s_83fefd5b0a3f5a::t_9382c13969c526 44,62,80,98,115,141,148-161,172,179,246
+internal/store/store_test.go
+  s_83fefd5b0a3f5a::t_99cfe8feebf433 7,10,12,30,127-241
+internal/audit/audit_test.go
+  s_83fefd5b0a3f5a::t_edeb91be2e195c 109-126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9859012cf036cda5827d11c60c965ea65bf8dc5a",
+  "prompts": {},
+  "sessions": {
+    "s_83fefd5b0a3f5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8cd4f19-86bd-400f-a51e-52c10d263440",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
