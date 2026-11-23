@@ -1,0 +1,34 @@
+internal/mapping/mapping_test.go
+  s_83fefd5b0a3f5a::t_30c0c2fbdf3d71 339-368
+internal/mapping/types.go
+  s_83fefd5b0a3f5a::t_eba4a170630671 29,55-56,59-62,70
+  s_83fefd5b0a3f5a::t_5da1a9ac12bfaa 57-58,63-69,71,83
+internal/cli/mapping_cmd_test.go
+  s_83fefd5b0a3f5a::t_30c0c2fbdf3d71 116-132
+docs/commands.md
+  s_83fefd5b0a3f5a::t_42505ace657f0d 152
+docs/mapping.md
+  s_83fefd5b0a3f5a::t_c3de43ef788bdf 9,44-45
+internal/cli/mapping_cmd.go
+  s_83fefd5b0a3f5a::t_d897e0602bc017 72,87,100
+internal/cli/sync_test.go
+  s_83fefd5b0a3f5a::t_ed42cc28438153 57-59
+internal/mapping/mapping.go
+  s_83fefd5b0a3f5a::t_eea396b5be4838 289-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4304430ea78f956e6cff3c808be06bd13af54ffd",
+  "prompts": {},
+  "sessions": {
+    "s_83fefd5b0a3f5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8cd4f19-86bd-400f-a51e-52c10d263440",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
