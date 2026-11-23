@@ -172,7 +172,8 @@ See the log with `pvault audit NAME` or the TUI Audit view.
 A global audited entry is logged as `export` once per new shell, and as `inherit`
 for each command typed in that shell. `inherit` shows that the command started with
 the secret in its environment, not that it read it. For a log entry at each read, use
-`scope = "command"`.
+`scope = "command"`. To see which running programs hold a global secret, select it in
+the TUI Vault view and press `p`.
 
 ## History and rollback
 

@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -61,6 +62,14 @@ func (m Model) startRollback() (tea.Model, tea.Cmd) {
 func (m Model) applyPlan(msg planMsg) (tea.Model, tea.Cmd) {
 	m.planTarget, m.planRestored, m.planRemoved = msg.revision, msg.restored, msg.removed
 	return m, nil
+}
+
+// applyRevisions keeps the list only when it matches the current filter.
+func (m Model) applyRevisions(msg revisionsMsg) Model {
+	if msg.entry == m.historyEntry {
+		m.revisions, m.syncTags = msg.revisions, msg.tags
+	}
+	return m
 }
 
 // historyView renders sync tags and commits, or one entry's changes.
@@ -155,12 +164,16 @@ func (m Model) entryRevisionDetail(revision store.Revision) string {
 	return strings.Join(lines, "\n")
 }
 
-// writeEvent finds the audit event of the write that made revision; the
-// store logs each write's commit as "commit <short hash>" in Detail.
+// changeActions are the audit actions whose detail names their commit.
+var changeActions = []audit.Action{audit.ActionWrite, audit.ActionDelete, audit.ActionRollback}
+
+// writeEvent finds the audit event of the change that made revision. The
+// store logs "commit <7-char hash>", which can differ from git's %h.
 func (m Model) writeEvent(revision store.Revision) (audit.Event, bool) {
+	commit := "commit " + revision.Hash[:min(7, len(revision.Hash))]
 	for _, event := range m.auditEvents {
-		if event.Entry == m.historyEntry && event.Action == audit.ActionWrite &&
-			strings.Contains(event.Detail, "commit "+revision.Short) {
+		if event.Entry == m.historyEntry && slices.Contains(changeActions, event.Action) &&
+			strings.Contains(event.Detail, commit) {
 			return event, true
 		}
 	}

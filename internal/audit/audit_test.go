@@ -316,3 +316,21 @@ func TestWasAuditedReadsSavedFlags(t *testing.T) {
 		t.Fatal("WasAudited does not match the saved names")
 	}
 }
+
+func TestRecordChainsAfterLastLineLongerThanOneReadChunk(t *testing.T) {
+	recorder := newRecorder(t, "github")
+	recorder.Callers = func() []Process {
+		return []Process{{PID: 1, Comm: "xargs", Argv: slices.Repeat([]string{strings.Repeat("a", 100)}, 120)}}
+	}
+	for range 3 {
+		if err := recorder.Record("github", ActionUse, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if lines := rawLines(t, recorder.Path); len(lines[1]) <= tailChunkBytes {
+		t.Fatalf("line is %d bytes, want more than %d", len(lines[1]), tailChunkBytes)
+	}
+	if count, err := Verify(recorder.Path); err != nil || count != 3 {
+		t.Fatalf("Verify = %d, %v", count, err)
+	}
+}

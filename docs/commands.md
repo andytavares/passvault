@@ -156,13 +156,13 @@ newer than a Go duration, such as `30m` or `24h`. With no events it prints
 |---|---|
 | `use` | `pvault get` or `pvault run` read the value |
 | `export` | a new shell exported a global entry |
-| `inherit` | a command typed in that shell started with the global entry in its environment |
+| `inherit` | a command typed in that shell started with the global entry in its environment; logged only when the shell has the variable set |
 | `compare` | sync or check read the value to compare it |
 | `view` | the value was shown on screen |
 | `copy` | the value was copied to the clipboard |
-| `write` | sync or the TUI wrote a new value |
-| `delete` | the entry was deleted |
-| `rollback` | a rollback restored the entry |
+| `write` | sync or the TUI wrote a new value; detail `added` or `changed · commit <hash>` |
+| `delete` | the entry was deleted; detail `removed · commit <hash>` |
+| `rollback` | a rollback restored the entry; detail `to <REV> · commit <hash>` |
 | `audit-on` | the entry got `audit = true` |
 | `audit-off` | the entry lost `audit = true` |
 

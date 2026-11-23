@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
@@ -252,29 +253,41 @@ func (m Model) detailPane() string {
 	lines = append(lines, m.detailFields(row)...)
 	lines = append(lines, "", m.styles.dim.Render("History"))
 	lines = append(lines, m.historyLines()...)
-	lines = append(lines, m.holderLines(row.Name)...)
+	lines = append(lines, m.holderLines(row.Name, m.bodyHeight()-len(lines))...)
 	return strings.Join(lines, "\n")
 }
 
 // holderLines list the processes started with the entry's env variable,
-// once p has loaded them for this entry.
-func (m Model) holderLines(name string) []string {
+// once p has loaded them for this entry, in at most room lines.
+func (m Model) holderLines(name string, room int) []string {
 	if m.holders == nil || m.holders.name != name {
 		return nil
 	}
-	summary := fmt.Sprintf("Held by    %d processes started with %s", len(m.holders.processes), m.holders.env)
-	if len(m.holders.processes) == 0 {
+	processes := m.holders.processes
+	summary := fmt.Sprintf("Held by    %d processes started with %s", len(processes), m.holders.env)
+	if len(processes) == 0 {
 		summary = "Held by    no process started with " + m.holders.env
 	}
-	width := 0
-	for _, process := range m.holders.processes {
-		width = max(width, len(fmt.Sprint(process.PID)))
-	}
-	lines := []string{"", summary}
-	for _, process := range m.holders.processes {
-		lines = append(lines, fmt.Sprintf("  %*d  %s", width, process.PID, callerCommand(process)))
+	// blank, summary, the "more" line and the macOS note take four lines.
+	shown := processes[:min(len(processes), max(0, room-4))]
+	lines := append([]string{"", summary}, processLines(shown)...)
+	if hidden := len(processes) - len(shown); hidden > 0 {
+		lines = append(lines, m.styles.dim.Render(fmt.Sprintf("  %d more not shown", hidden)))
 	}
 	return append(lines, m.styles.dim.Render("macOS hides Apple's own programs"))
+}
+
+// processLines renders each process as its right-aligned pid and command.
+func processLines(processes []audit.Process) []string {
+	width := 0
+	for _, process := range processes {
+		width = max(width, len(fmt.Sprint(process.PID)))
+	}
+	lines := make([]string, len(processes))
+	for i, process := range processes {
+		lines[i] = fmt.Sprintf("  %*d  %s", width, process.PID, callerCommand(process))
+	}
+	return lines
 }
 
 func (m Model) detailFields(row syncer.StatusRow) []string {

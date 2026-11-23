@@ -193,13 +193,13 @@ func (s *Store) Rollback(ctx context.Context, revision, entry string) (string, e
 	if err != nil {
 		return "", err
 	}
-	return hash, s.recordRollback(target, append(restored, removed...))
+	return hash, s.recordRollback("to "+target+" · commit "+hash, append(restored, removed...))
 }
 
 // recordRollback writes one rollback event per changed entry.
-func (s *Store) recordRollback(revision string, names []string) error {
+func (s *Store) recordRollback(detail string, names []string) error {
 	for _, name := range names {
-		if err := s.record(name, audit.ActionRollback, "to "+revision); err != nil {
+		if err := s.record(name, audit.ActionRollback, detail); err != nil {
 			return err
 		}
 	}

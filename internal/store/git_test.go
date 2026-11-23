@@ -363,8 +363,24 @@ func TestRollbackRecordsOneEventPerAuditedRestoredOrRemovedEntry(t *testing.T) {
 	got := []string{events[0].Entry + " " + string(events[0].Action) + " " + events[0].Detail,
 		events[1].Entry + " " + string(events[1].Action) + " " + events[1].Detail}
 	slices.Sort(got)
-	want := []string{"aws rollback to " + head[:7], "github rollback to " + head[:7]}
+	commit := " · commit " + s.head()[:7]
+	want := []string{"aws rollback to " + head[:7] + commit, "github rollback to " + head[:7] + commit}
 	if !slices.Equal(got, want) {
 		t.Fatalf("events = %v, want %v", got, want)
+	}
+}
+
+func TestRemoveOfAuditedEntryRecordsRemovedWithCommit(t *testing.T) {
+	s := newGitStore(t)
+	s.insert("github", "first")
+	path := withRecorder(t, s.Store, "github")
+
+	if err := s.Remove(context.Background(), "github"); err != nil {
+		t.Fatal(err)
+	}
+	events := readEvents(t, path)
+	want := "removed · commit " + s.head()[:7]
+	if len(events) != 1 || events[0].Action != audit.ActionDelete || events[0].Detail != want {
+		t.Fatalf("events = %+v, want detail %q", events, want)
 	}
 }

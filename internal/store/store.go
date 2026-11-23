@@ -77,6 +77,12 @@ func (s *Store) writeDetail(ctx context.Context, existed bool) (string, error) {
 	if existed {
 		detail = "changed"
 	}
+	return s.withCommit(ctx, detail)
+}
+
+// withCommit appends " · commit <short hash>" of HEAD in a git store, so an
+// audit event names the commit that made the change.
+func (s *Store) withCommit(ctx context.Context, detail string) (string, error) {
 	if !s.IsGitRepo() {
 		return detail, nil
 	}
@@ -92,7 +98,11 @@ func (s *Store) Remove(ctx context.Context, name string) error {
 	if _, err := s.Runner.Run(ctx, s.passCmd("rm", "-f", name)); err != nil {
 		return err
 	}
-	return s.record(name, audit.ActionDelete, "")
+	detail, err := s.withCommit(ctx, "removed")
+	if err != nil {
+		return err
+	}
+	return s.record(name, audit.ActionDelete, detail)
 }
 
 // record writes one audit event for name; a nil Recorder records nothing.

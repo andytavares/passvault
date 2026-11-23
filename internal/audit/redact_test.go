@@ -28,6 +28,9 @@ func TestRedactReplacesSecretText(t *testing.T) {
 		{"assignment", "env GITHUB_TOKEN=abcdef123 make", "env GITHUB_TOKEN=[redacted] make"},
 		{"assignment of other name", "env GOFLAGS=-race make", "env GOFLAGS=-race make"},
 		{"no secret", "pvault get github --field user", "pvault get github --field user"},
+		{"known value in bearer header", "curl -H 'Authorization: Bearer lin_test_value_123456' api", "curl -H 'Authorization: Bearer [LINEAR_API_KEY]' api"},
+		{"bearer without header", "wget --header='Bearer s3cr3tvalue' api", "wget --header='Bearer [redacted]' api"},
+		{"known value in assignment", "env LINEAR_API_KEY=lin_test_value_123456 make", "env LINEAR_API_KEY=[LINEAR_API_KEY] make"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -101,7 +104,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestHoldersFindsChildWithEnvName(t *testing.T) {
-	child := exec.Command(os.Args[0])
+	child := exec.Command(os.Args[0], "--token", "abcdef1234567890")
 	child.Env = append(os.Environ(), "PVAULT_HELPER_SLEEP=1", "PVAULT_HOLDER_TEST=secret-holder-value")
 	if err := child.Start(); err != nil {
 		t.Fatal(err)
@@ -113,6 +116,9 @@ func TestHoldersFindsChildWithEnvName(t *testing.T) {
 	}
 	if !slices.ContainsFunc(holders, func(p Process) bool { return p.PID == child.Process.Pid }) {
 		t.Errorf("holders = %+v, want child pid %d", holders, child.Process.Pid)
+	}
+	if text := fmt.Sprintf("%+v", holders); strings.Contains(text, "abcdef1234567890") || !strings.Contains(text, "[redacted]") {
+		t.Errorf("holder argv is not redacted: %s", text)
 	}
 	if strings.Contains(fmt.Sprintf("%+v", holders), "secret-holder-value") {
 		t.Errorf("holders contain the env value: %+v", holders)

@@ -11,6 +11,8 @@ import (
 var auditedGhCommand = mapping.Secret{Pass: "work/gh-cli", Ref: "op://Private/GitHub/cli", Env: "GH_TOKEN", Scope: mapping.ScopeCommand, Commands: []string{"gh"}, Audit: true}
 
 func TestPreexecRecordsInheritOnlyForAuditedGlobal(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "github-value")
+	t.Setenv("GH_TOKEN", "gh-value")
 	f := newCliFixture(t, "")
 	f.app.via = "preexec"
 	f.writeMapping(t, auditedGithub, pagerduty, auditedGhCommand)
@@ -40,6 +42,20 @@ func TestPreexecReplacesKnownEnvValueWithItsName(t *testing.T) {
 	events := auditEvents(t, f)
 	if len(events) != 1 || !strings.Contains(events[0].Detail, "[GITHUB_TOKEN]") || strings.Contains(events[0].Detail, "ghp_test_value") {
 		t.Fatalf("events = %+v", events)
+	}
+}
+
+func TestPreexecSkipsAuditedGlobalNotSetInThisShell(t *testing.T) {
+	t.Setenv("GITHUB_TOKEN", "")
+	f := newCliFixture(t, "")
+	f.app.via = "preexec"
+	f.writeMapping(t, auditedGithub)
+
+	if err := f.run(f.app.preexecCommand(), "--", "npm", "run", "dev"); err != nil {
+		t.Fatalf("preexec: %v", err)
+	}
+	if events := auditEvents(t, f); len(events) != 0 {
+		t.Fatalf("events = %+v, want none: the shell never received GITHUB_TOKEN", events)
 	}
 }
 

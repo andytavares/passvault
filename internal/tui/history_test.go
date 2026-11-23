@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/user"
 	"strings"
 	"testing"
@@ -131,5 +132,34 @@ func TestFilteredHistoryDetailShowsWhoWroteTheCommit(t *testing.T) {
 	}
 	if view = ansi.Strip(viewText(update(t, m, press("j")))); strings.Contains(view, "Who ") {
 		t.Errorf("a revision without a write event shows a Who line:\n%s", view)
+	}
+}
+
+func TestFilteredHistoryMatchesDeleteEventBySevenCharacterHash(t *testing.T) {
+	f := newFixture(t)
+	seedAlphaHistory(t, f)
+	if out, err := exec.Command("git", "-C", f.env.Paths.StoreDir, "config", "core.abbrev", "12").CombinedOutput(); err != nil {
+		t.Fatalf("git config: %v\n%s", err, out)
+	}
+	revisions, err := f.deps.Store.History(context.Background(), "alpha", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recordEvent(t, f, audit.Event{Time: time.Date(2026, 11, 23, 16, 41, 0, 0, time.UTC), Entry: "alpha",
+		Action: audit.ActionDelete, Via: "tui", Detail: "removed · commit " + revisions[0].Hash[:7],
+		Callers: []audit.Process{{PID: 4120, Comm: "-zsh"}}})
+	view := ansi.Strip(viewText(pressHistoryKey(t, f.loadModel(t), "h")))
+	if !strings.Contains(view, "│ What    4120  -zsh") {
+		t.Errorf("detail lacks the delete event's caller:\n%s", view)
+	}
+}
+
+func TestHistoryIgnoresRevisionsLoadedForAnotherEntry(t *testing.T) {
+	f := newFixture(t)
+	seedAlphaHistory(t, f)
+	m := pressHistoryKey(t, f.loadModel(t), "h")
+	stale := revisionsCmd(f.deps.Store, "beta")()
+	if view := ansi.Strip(viewText(update(t, m, stale))); !strings.Contains(view, "History ─ alpha · 3 changes") {
+		t.Errorf("beta's revisions replaced alpha's list:\n%s", view)
 	}
 }

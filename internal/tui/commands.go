@@ -24,8 +24,11 @@ type (
 		opOK       bool
 		mapErr     string
 	}
-	historyMsg   struct{ revisions []store.Revision }
+	historyMsg struct{ revisions []store.Revision }
+	// revisionsMsg names the entry it was loaded for ("" for all), so a
+	// load that finishes after the filter changed is dropped.
 	revisionsMsg struct {
+		entry     string
 		revisions []store.Revision
 		tags      []string
 	}
@@ -142,7 +145,7 @@ func revisionsCmd(st *store.Store, entry string) tea.Cmd {
 		if err != nil {
 			return errMsg{err}
 		}
-		return revisionsMsg{revisions, tags}
+		return revisionsMsg{entry, revisions, tags}
 	}
 }
 

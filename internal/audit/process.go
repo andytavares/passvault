@@ -55,7 +55,7 @@ func Holders(envName string) ([]Process, error) {
 		holders = append(holders, Process{
 			PID:  pid,
 			Comm: unix.ByteSliceToString(info.Proc.P_comm[:]),
-			Argv: cutArgs(toStrings(args)),
+			Argv: cutArgs(RedactArgv(toStrings(args), nil)),
 		})
 	}
 	slices.SortFunc(holders, func(left, right Process) int { return left.PID - right.PID })

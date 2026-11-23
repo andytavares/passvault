@@ -85,3 +85,19 @@ func TestVaultFooterListsHistoryAndHoldersKeys(t *testing.T) {
 		t.Errorf("full help lacks n new and r refresh: %q", full)
 	}
 }
+
+func TestHoldersListLongerThanPaneEndsWithCount(t *testing.T) {
+	m := holdersModel(t)
+	many := make([]audit.Process, 40)
+	for i := range many {
+		many[i] = audit.Process{PID: 6000 + i, Comm: "node"}
+	}
+	m.deps.Holders = func(string) ([]audit.Process, error) { return many, nil }
+	next, cmd := m.Update(press("p"))
+	view := ansi.Strip(viewText(update(t, next.(Model), cmd())))
+	for _, want := range []string{"│ Held by    40 processes started with ALPHA_KEY", "more not shown", "│ macOS hides Apple's own programs"} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q:\n%s", want, view)
+		}
+	}
+}

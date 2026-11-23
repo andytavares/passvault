@@ -215,7 +215,7 @@ func (m Model) updateData(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 	case historyMsg:
 		m.history = msg.revisions
 	case revisionsMsg:
-		m.revisions, m.syncTags = msg.revisions, msg.tags
+		m = m.applyRevisions(msg)
 	case auditMsg:
 		m.auditEvents, m.auditCursor = msg.events, 0
 	case itemsMsg:

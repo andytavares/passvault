@@ -12,22 +12,37 @@ const minKnownBytes = 8
 
 const redacted = "[redacted]"
 
+// Each value pattern skips text that starts with "[", so a value already
+// written as [NAME] or [redacted] keeps its name.
 var (
 	tokenPattern      = regexp.MustCompile(`\b(?:ghp_|gho_|ghu_|ghs_|ghr_|github_pat_|sk-|xoxb-|xoxp-|xoxa-|AKIA|lin_api_)[A-Za-z0-9_-]{16,}`)
-	headerPattern     = regexp.MustCompile(`(?i)(authorization:\s*(?:bearer\s+)?)[^'"\r\n]+`)
-	flagPattern       = regexp.MustCompile(`(--(?:password|token|secret|api-key)[= ])\S+`)
-	assignmentPattern = regexp.MustCompile(`\b([A-Z][A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD))=\S+`)
+	headerPattern     = regexp.MustCompile(`(?i)authorization:\s*[^'"\r\n]+`)
+	bearerPattern     = regexp.MustCompile(`(?i)\b(bearer\s+)[^\['"\s][^'"\s]*`)
+	flagPattern       = regexp.MustCompile(`(--(?:password|token|secret|api-key)[= ])[^\[\s]\S*`)
+	assignmentPattern = regexp.MustCompile(`\b([A-Z][A-Z0-9_]*(?:TOKEN|KEY|SECRET|PASSWORD))=[^\[\s]\S*`)
 	secretFlags       = []string{"--password", "--token", "--secret", "--api-key"}
 )
 
 // Redact replaces secret text: known values (env name → value) by [NAME],
-// then token prefixes, Authorization headers, secret flags and assignments.
+// then token prefixes, Authorization headers, Bearer values, secret flags
+// and assignments.
 func Redact(text string, known map[string]string) string {
 	text = replaceKnown(text, known)
 	text = tokenPattern.ReplaceAllString(text, redacted)
-	text = headerPattern.ReplaceAllString(text, "${1}"+redacted)
+	text = bearerPattern.ReplaceAllString(text, "${1}"+redacted)
+	text = headerPattern.ReplaceAllStringFunc(text, redactHeaderValue)
 	text = flagPattern.ReplaceAllString(text, "${1}"+redacted)
 	return assignmentPattern.ReplaceAllString(text, "${1}="+redacted)
+}
+
+// redactHeaderValue redacts the value of one "Authorization: value" match,
+// unless the Bearer rule or a known value already replaced it.
+func redactHeaderValue(match string) string {
+	value := strings.TrimLeft(match[strings.Index(match, ":")+1:], " \t")
+	if strings.HasPrefix(value, "[") || strings.HasPrefix(strings.ToLower(value), "bearer [") {
+		return match
+	}
+	return match[:len(match)-len(value)] + redacted
 }
 
 // RedactArgv redacts each argument, and the argument after a secret flag.

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,7 +20,8 @@ func (a *app) preexecCommand() *cobra.Command {
 	return cmd
 }
 
-// runPreexec records cmdline as inherited by each audited global secret. It
+// runPreexec records cmdline as inherited by each audited global secret set
+// in this shell; an export that failed at shell start is not logged. It
 // runs before every shell command, so it never reads the pass store and
 // ignores a missing or broken mapping.
 func (a *app) runPreexec(cmdline string) error {
@@ -32,7 +34,7 @@ func (a *app) runPreexec(cmdline string) error {
 	}
 	recorder := a.recorder()
 	for _, secret := range m.Secrets {
-		if shellenv.IsAuditedGlobal(secret) {
+		if shellenv.IsAuditedGlobal(secret) && os.Getenv(secret.Env) != "" {
 			if err := recorder.Record(secret.Pass, audit.ActionInherit, cmdline); err != nil {
 				return err
 			}
