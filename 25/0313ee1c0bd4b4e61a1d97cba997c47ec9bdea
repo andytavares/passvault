@@ -1,0 +1,41 @@
+docs/tui.md
+  s_83fefd5b0a3f5a::t_33bedeb375a569 47,118,122-130
+  s_83fefd5b0a3f5a::t_9d8ba1c0a92ae3 131
+docs/install.md
+  s_83fefd5b0a3f5a::t_33bedeb375a569 134-135,142
+internal/setup/uninstall_test.go
+  s_83fefd5b0a3f5a::t_1c4410b17c0dd9 223-226,228-251,253-260
+  s_83fefd5b0a3f5a::t_918955a3b4d5f0 227,252
+docs/how-it-works.md
+  s_83fefd5b0a3f5a::t_32a45ad3f6800e 35,85-88
+internal/cli/doctor_test.go
+  s_83fefd5b0a3f5a::t_1c4410b17c0dd9 97-107
+docs/usage.md
+  s_83fefd5b0a3f5a::t_33bedeb375a569 156-173
+internal/cli/uninstall_cmd.go
+  s_83fefd5b0a3f5a::t_918955a3b4d5f0 16,30,43
+internal/setup/uninstall.go
+  s_83fefd5b0a3f5a::t_918955a3b4d5f0 8,52-54,208,217-234
+  s_83fefd5b0a3f5a::t_a949936824afaf 20
+  s_83fefd5b0a3f5a::t_e1f3e1f9a1ce41 235-237
+internal/cli/doctor.go
+  s_83fefd5b0a3f5a::t_918955a3b4d5f0 139-141
+docs/commands.md
+  s_83fefd5b0a3f5a::t_32a45ad3f6800e 14-15,123-160,234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "250313ee1c0bd4b4e61a1d97cba997c47ec9bdea",
+  "prompts": {},
+  "sessions": {
+    "s_83fefd5b0a3f5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8cd4f19-86bd-400f-a51e-52c10d263440",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
