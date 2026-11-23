@@ -238,3 +238,31 @@ func TestAuditViewMovesCursorWithJAndK(t *testing.T) {
 func glyphColumn(line string) int {
 	return slices.Index([]rune(line), '◐')
 }
+
+func TestVaultTruncatesLongNameAndKeepsColumnsAligned(t *testing.T) {
+	f := newFixture(t)
+	long := "terminator-app-specific-password"
+	writeMapping(t, f.deps.MappingPath, fmt.Sprintf(`version = 1
+
+[[secret]]
+pass = "linear-api-key"
+ref = "op://Private/Linear/credential"
+audit = true
+
+[[secret]]
+pass = %q
+ref = "op://Private/Terminator/credential"
+audit = true
+`, long))
+	f.env.Insert(t, "linear-api-key", "linear-value")
+	f.env.Insert(t, long, "terminator-value")
+	view := ansi.Strip(viewText(f.loadModel(t)))
+	short, longLine := lineWith(view, "▸ linear-api-key"), lineWith(view, "terminator-app")
+	auditColumn := func(line string) int { return slices.Index([]rune(line), '◉') }
+	if auditColumn(short) != auditColumn(longLine) {
+		t.Errorf("audit marks are not aligned:\n%q\n%q", short, longLine)
+	}
+	if !strings.Contains(longLine, "terminator-app-specific-pa… ◉") {
+		t.Errorf("long name is not truncated with a gap before the mark: %q", longLine)
+	}
+}

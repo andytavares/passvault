@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
@@ -14,6 +15,9 @@ import (
 
 // entriesWidth fits the cursor, a 28-column name, glyph and status.
 const entriesWidth = 50
+
+// nameWidth is the widest entry name the list shows; longer names end in "…".
+const nameWidth = 27
 
 // revealDuration is how long a revealed value stays visible.
 const revealDuration = 10 * time.Second
@@ -159,7 +163,8 @@ func (m Model) entryLine(index int, row syncer.StatusRow) string {
 	if m.mapping.IsAudited(row.Name) {
 		auditMark = m.auditMark()
 	}
-	label := fmt.Sprintf("%s %-27s%s %s", cursorMark(index == m.cursor), row.Name, auditMark, m.glyph(row))
+	name := ansi.Truncate(row.Name, nameWidth, "…")
+	label := fmt.Sprintf("%s %-*s %s %s", cursorMark(index == m.cursor), nameWidth, name, auditMark, m.glyph(row))
 	return label + " " + m.statusLabel(row.Kind, age(row.SyncedAt, m.deps.Now()))
 }
 
