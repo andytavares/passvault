@@ -46,6 +46,13 @@ type (
 	errMsg          struct{ err error }
 )
 
+// holdersMsg carries the processes started with env, for the entry name.
+type holdersMsg struct {
+	name      string
+	env       string
+	processes []audit.Process
+}
+
 // loadCmd reads mapping, state, store and op health in one command.
 func loadCmd(deps Deps) tea.Cmd {
 	return func() tea.Msg {
@@ -119,10 +126,15 @@ func historyCmd(st *store.Store, name string) tea.Cmd {
 	}
 }
 
-// revisionsCmd loads all commits and sync tags for the history view.
-func revisionsCmd(st *store.Store) tea.Cmd {
+// revisionsCmd loads the sync tags and the last 50 commits, or with entry
+// set every commit that touched entry, for the history view.
+func revisionsCmd(st *store.Store, entry string) tea.Cmd {
+	limit := 50
+	if entry != "" {
+		limit = 0
+	}
 	return func() tea.Msg {
-		revisions, err := st.History(context.Background(), "", 50)
+		revisions, err := st.History(context.Background(), entry, limit)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -143,6 +155,17 @@ func auditCmd(read func() ([]audit.Event, error)) tea.Cmd {
 		}
 		slices.Reverse(events)
 		return auditMsg{events}
+	}
+}
+
+// holdersCmd lists the processes started with env, for the entry name.
+func holdersCmd(holders func(string) ([]audit.Process, error), name, env string) tea.Cmd {
+	return func() tea.Msg {
+		processes, err := holders(env)
+		if err != nil {
+			return errMsg{err}
+		}
+		return holdersMsg{name: name, env: env, processes: processes}
 	}
 }
 
@@ -215,10 +238,11 @@ func copyCmd(st *store.Store, name string) tea.Cmd {
 	}
 }
 
-// rollbackCmd restores the store to revision, then reports it.
-func rollbackCmd(st *store.Store, revision string) tea.Cmd {
+// rollbackCmd restores the store, or only entry when set, to revision,
+// then reports it.
+func rollbackCmd(st *store.Store, revision, entry string) tea.Cmd {
 	return func() tea.Msg {
-		hash, err := st.Rollback(context.Background(), revision, "")
+		hash, err := st.Rollback(context.Background(), revision, entry)
 		if err != nil {
 			return errMsg{err}
 		}
@@ -226,10 +250,11 @@ func rollbackCmd(st *store.Store, revision string) tea.Cmd {
 	}
 }
 
-// planCmd previews a rollback of revision.
-func planCmd(st *store.Store, revision string) tea.Cmd {
+// planCmd previews a rollback of the store, or only entry when set, to
+// revision.
+func planCmd(st *store.Store, revision, entry string) tea.Cmd {
 	return func() tea.Msg {
-		restored, removed, err := st.RollbackPlan(context.Background(), revision, "")
+		restored, removed, err := st.RollbackPlan(context.Background(), revision, entry)
 		if err != nil {
 			return errMsg{err}
 		}

@@ -13,7 +13,7 @@ Entries                                           │ pagerduty-api-key
                                                   │ Value      ••••••••••••••••  press enter to reveal
 ──────────────────────────────────────────────────────────────────────────
  copied pagerduty-api-key (clears in 45 s)
- enter show/hide • c copy • n new • d delete • s sync • r refresh • tab next view • ? help • q quit
+ enter show/hide • c copy • h history • p holders • s sync • tab next view • ? help • q quit
 ```
 
 The header shows the store, entry counts and whether `op` is signed in (`op ✓` /
@@ -50,10 +50,18 @@ masked value, last sync and git history.
 |---|---|
 | `enter` | show the value for 10 seconds; `enter` again hides it |
 | `c` | copy to the clipboard with `pass show -c`; pass clears it after 45 seconds |
+| `h` | open History filtered to the entry |
+| `p` | list the processes started with the entry's env variable; `p` again, moving or switching view hides the list. Works only on an enabled `global` entry with an env variable |
 | `n` | new pass entry: type a name, `enter`, type the value (masked), `enter`. It is unmanaged: not added to the mapping |
 | `d` | delete the entry: type its exact name to confirm |
 | `s` | start a sync and switch to the Sync view |
 | `r` | refresh: re-read 1Password and the list |
+
+The footer lists `n`, `d` and `r` only in the full help (`?`).
+
+`p` shows `Held by    N processes started with ENV` and one line per process
+with its pid and command. It finds only processes whose launch environment sets
+the variable. macOS hides Apple's own programs, so they never appear.
 
 In any prompt, `esc` cancels and `backspace` deletes.
 
@@ -71,6 +79,9 @@ A differing entry opens a conflict box with both lengths:
 | `enter` | show both values for 10 seconds |
 | `esc` | stop the sync |
 
+The TUI sync writes its audit events with via `sync`, so the Audit view hides them
+by default.
+
 There is no "overwrite all" key on purpose. The TUI sync has no prune or
 skip-conflicts option; use `pvault sync --prune` or `--skip-conflicts`.
 
@@ -78,6 +89,17 @@ skip-conflicts option; use `pvault sync --prune` or `--skip-conflicts`.
 
 Lists sync tags and store commits. `enter` on a commit previews the rollback (entries
 restored and removed) and runs it only after you type `rollback` and press `enter`.
+
+| Key | Action |
+|---|---|
+| `enter` | roll back the store, or only the filtered entry, to the commit |
+| `f` | step the entry filter through each Vault entry, then back to the whole store |
+
+Filtered to one entry (`f`, or `h` in Vault), the view lists every commit that
+changed the entry with its kind: `added`, `changed`, `removed` or `rolled back`.
+The detail pane shows the commit, its tags and, when the audit log has the write
+event of that commit, who made it and from which process. `enter` previews and
+runs `Rollback <entry> to <commit>`; other entries stay as they are.
 
 ## Mapping
 
@@ -129,6 +151,10 @@ decrypts.
 |---|---|
 | `j`/`k` | move |
 | `f` | step the entry filter through each entry in the log, then back to all entries |
+| `a` | show or hide routine rows: every `compare` and every event via `sync` |
+
+Routine rows are hidden by default. The header then says
+`N of M events · K hidden`.
 
 ## Known issues
 

@@ -31,13 +31,21 @@ ref = "op://Private/Beta/credential"
 // callers to the fixture's audit log.
 func recordUse(t *testing.T, f *fixture, event audit.Event) {
 	t.Helper()
+	event.Action = audit.ActionUse
+	recordEvent(t, f, event)
+}
+
+// recordEvent appends event's action with its time, entry, via, detail and
+// callers to the fixture's audit log.
+func recordEvent(t *testing.T, f *fixture, event audit.Event) {
+	t.Helper()
 	recorder := &audit.Recorder{
 		Path: f.env.Paths.Audit(), Via: event.Via,
 		Now:     func() time.Time { return event.Time },
 		Audited: func(string) bool { return true },
 		Callers: func() []audit.Process { return event.Callers },
 	}
-	if err := recorder.Record(event.Entry, audit.ActionUse, event.Detail); err != nil {
+	if err := recorder.Record(event.Entry, event.Action, event.Detail); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -158,7 +166,7 @@ func TestAuditViewListsEventsNewestFirst(t *testing.T) {
 		"Audit ─ all entries · 2 events",
 		"▸ 11-23 14:02  stripe-key  use      get",
 		"  11-23 13:41  stripe-key  use      run",
-		"j/k move • f filter entry • tab next view",
+		"j/k move • f filter entry • a show sync/compare • tab next view",
 	} {
 		if !strings.Contains(view, want) {
 			t.Errorf("view missing %q:\n%s", want, view)
@@ -208,6 +216,61 @@ func TestAuditFilterCyclesThroughEntriesThenAll(t *testing.T) {
 	m = update(t, m, press("f"))
 	if view = ansi.Strip(viewText(m)); !strings.Contains(view, "Audit ─ all entries · 3 events") {
 		t.Fatalf("third f should show all entries:\n%s", view)
+	}
+}
+
+// routineAudit opens the Audit view over two routine compares, a sync
+// write, a use and an export, oldest to newest.
+func routineAudit(t *testing.T) Model {
+	t.Helper()
+	f := newFixture(t)
+	for minute, event := range []audit.Event{
+		{Entry: "alpha", Action: audit.ActionCompare, Via: "sync"},
+		{Entry: "alpha", Action: audit.ActionCompare, Via: "check"},
+		{Entry: "alpha", Action: audit.ActionWrite, Via: "sync"},
+		{Entry: "alpha", Action: audit.ActionUse, Via: "get"},
+		{Entry: "beta", Action: audit.ActionExport, Via: "env"},
+	} {
+		event.Time = time.Date(2026, 11, 23, 9, minute, 0, 0, time.UTC)
+		recordEvent(t, f, event)
+	}
+	return openAudit(t, f.loadModel(t))
+}
+
+func TestAuditViewHidesCompareAndSyncRowsByDefault(t *testing.T) {
+	view := ansi.Strip(viewText(routineAudit(t)))
+	for _, want := range []string{
+		"Audit ─ all entries · 2 of 5 events · 3 hidden",
+		"▸ 11-23 09:04  beta   export   env",
+		"  11-23 09:03  alpha  use      get",
+		"j/k move • f filter entry • a show sync/compare • tab next view",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q:\n%s", want, view)
+		}
+	}
+	for _, hidden := range []string{"alpha  compare", "alpha  write"} {
+		if strings.Contains(view, hidden) {
+			t.Errorf("routine %s row is shown:\n%s", hidden, view)
+		}
+	}
+}
+
+func TestAuditShowAllKeyListsRoutineRows(t *testing.T) {
+	m := routineAudit(t)
+	m = update(t, update(t, m, press("j")), press("a"))
+	view := ansi.Strip(viewText(m))
+	for _, want := range []string{
+		"Audit ─ all entries · 5 events",
+		"▸ 11-23 09:04  beta   export   env",
+		"  11-23 09:02  alpha  write    sync",
+		"  11-23 09:01  alpha  compare  check",
+		"  11-23 09:00  alpha  compare  sync",
+		"a hide sync/compare",
+	} {
+		if !strings.Contains(view, want) {
+			t.Errorf("view missing %q:\n%s", want, view)
+		}
 	}
 }
 
@@ -264,5 +327,17 @@ audit = true
 	}
 	if !strings.Contains(longLine, "terminator-app-specific-pa… ◉") {
 		t.Errorf("long name is not truncated with a gap before the mark: %q", longLine)
+	}
+}
+
+func TestAuditViewWithOnlyRoutineRowsSaysHowToShowThem(t *testing.T) {
+	f := newFixture(t)
+	recordEvent(t, f, audit.Event{Time: time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC), Entry: "alpha", Action: audit.ActionCompare, Via: "sync"})
+	view := ansi.Strip(viewText(openAudit(t, f.loadModel(t))))
+	if !strings.Contains(view, "Only sync and compare rows here. Press a to show them.") {
+		t.Errorf("view lacks the hidden-rows hint:\n%s", view)
+	}
+	if strings.Contains(view, "No audit events") {
+		t.Errorf("view says the log is empty:\n%s", view)
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
@@ -142,5 +143,36 @@ func TestSyncBeforeFirstLoad(t *testing.T) {
 	}
 	if got := f.env.Show(t, "alpha"); got != "alpha-value" {
 		t.Fatalf("alpha = %q", got)
+	}
+}
+
+func TestSyncLogsAuditEventsViaSync(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	recorder := &audit.Recorder{
+		Path: f.env.Paths.Audit(), Via: "tui",
+		Now:     func() time.Time { return f.now },
+		Audited: func(string) bool { return true },
+		Callers: func() []audit.Process { return nil },
+	}
+	f.deps.Store.Recorder = recorder
+	m := f.loadModel(t)
+	if msg := <-startSync(f, &m); msg == nil {
+		t.Fatal("sync returned no message")
+	}
+	events, err := audit.Read(f.env.Paths.Audit())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) == 0 || events[0].Action != audit.ActionCompare {
+		t.Fatalf("sync should log a compare of alpha, got %+v", events)
+	}
+	for _, event := range events {
+		if event.Via != "sync" {
+			t.Errorf("%s %s logged via %q, want sync", event.Action, event.Entry, event.Via)
+		}
+	}
+	if recorder.Via != "tui" {
+		t.Errorf("sync changed the shared recorder's Via to %q", recorder.Via)
 	}
 }

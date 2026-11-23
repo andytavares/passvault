@@ -74,6 +74,10 @@ func (m Model) updateVault(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "d":
 		return m.startDelete()
+	case "h":
+		return m.openEntryHistory()
+	case "p":
+		return m.toggleHolders()
 	case "s":
 		return m.startSync()
 	case "r":
@@ -90,6 +94,7 @@ func (m Model) moveCursor(delta int) (tea.Model, tea.Cmd) {
 	}
 	m.cursor = next
 	m.clearReveal()
+	m.holders = nil
 	return m, historyCmd(m.deps.Store, m.rows[m.cursor].Name)
 }
 
@@ -104,6 +109,41 @@ func (m Model) toggleReveal() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, revealCmd(m.deps.Store, row.Name)
+}
+
+// openEntryHistory opens History filtered to the selected entry.
+func (m Model) openEntryHistory() (tea.Model, tea.Cmd) {
+	row, ok := m.selectedRow()
+	if !ok {
+		return m, nil
+	}
+	m.historyEntry, m.revCursor = row.Name, 0
+	return m.switchView(viewHistory)
+}
+
+// toggleHolders lists the processes started with the selected global
+// entry's env variable, or hides the list when shown.
+func (m Model) toggleHolders() (tea.Model, tea.Cmd) {
+	row, ok := m.selectedRow()
+	if !ok {
+		return m, nil
+	}
+	if m.holders != nil {
+		m.holders = nil
+		return m, nil
+	}
+	secret, found := m.mapping.Find(row.Name)
+	if !found || secret.Scope != mapping.ScopeGlobal || secret.Env == "" || !secret.IsEnabled() {
+		m.notice = "p works on global entries with an env variable"
+		return m, nil
+	}
+	return m, holdersCmd(m.deps.Holders, row.Name, secret.Env)
+}
+
+// applyHolders stores the processes for the detail pane.
+func (m Model) applyHolders(msg holdersMsg) (tea.Model, tea.Cmd) {
+	m.holders = &msg
+	return m, nil
 }
 
 func (m Model) copySelected() (tea.Model, tea.Cmd) {
@@ -212,7 +252,29 @@ func (m Model) detailPane() string {
 	lines = append(lines, m.detailFields(row)...)
 	lines = append(lines, "", m.styles.dim.Render("History"))
 	lines = append(lines, m.historyLines()...)
+	lines = append(lines, m.holderLines(row.Name)...)
 	return strings.Join(lines, "\n")
+}
+
+// holderLines list the processes started with the entry's env variable,
+// once p has loaded them for this entry.
+func (m Model) holderLines(name string) []string {
+	if m.holders == nil || m.holders.name != name {
+		return nil
+	}
+	summary := fmt.Sprintf("Held by    %d processes started with %s", len(m.holders.processes), m.holders.env)
+	if len(m.holders.processes) == 0 {
+		summary = "Held by    no process started with " + m.holders.env
+	}
+	width := 0
+	for _, process := range m.holders.processes {
+		width = max(width, len(fmt.Sprint(process.PID)))
+	}
+	lines := []string{"", summary}
+	for _, process := range m.holders.processes {
+		lines = append(lines, fmt.Sprintf("  %*d  %s", width, process.PID, callerCommand(process)))
+	}
+	return append(lines, m.styles.dim.Render("macOS hides Apple's own programs"))
 }
 
 func (m Model) detailFields(row syncer.StatusRow) []string {
@@ -258,5 +320,3 @@ func envOrDash(value string) string {
 	}
 	return value
 }
-
-var _ = mapping.Secret{}

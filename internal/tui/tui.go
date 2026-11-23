@@ -33,6 +33,7 @@ type Deps struct {
 	Now         func() time.Time
 	Editor      func(path string) *exec.Cmd
 	AuditLog    func() ([]audit.Event, error)
+	Holders     func(envName string) ([]audit.Process, error)
 }
 
 // ItemSource lists 1Password items and their fields, without values.
@@ -125,6 +126,8 @@ type Model struct {
 	cursor     int
 	history    []store.Revision
 	reveal     *revealState
+	// holders are the processes started with the selected entry's env.
+	holders *holdersMsg
 
 	prompt  promptKind
 	input   string
@@ -140,12 +143,15 @@ type Model struct {
 	planRestored []string
 	planRemoved  []string
 	planTarget   string
+	// historyEntry limits History to one entry; empty means the whole store.
+	historyEntry string
 
 	// auditEvents are newest first; auditFilter is an entry name, or empty
-	// for all entries.
-	auditEvents []audit.Event
-	auditCursor int
-	auditFilter string
+	// for all entries. auditShowAll also lists compare and sync rows.
+	auditEvents  []audit.Event
+	auditCursor  int
+	auditFilter  string
+	auditShowAll bool
 
 	mapCursor    int
 	envCursor    int
@@ -168,6 +174,9 @@ type Model struct {
 func NewModel(deps Deps) Model {
 	if deps.Now == nil {
 		deps.Now = time.Now
+	}
+	if deps.Holders == nil {
+		deps.Holders = audit.Holders
 	}
 	return Model{
 		deps:     deps,
@@ -264,6 +273,8 @@ func (m Model) updateAsync(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		next, cmd = m.applyCheckDone(msg)
 	case editorDoneMsg:
 		next, cmd = m.applyEditorDone(msg)
+	case holdersMsg:
+		next, cmd = m.applyHolders(msg)
 	default:
 		handled = false
 	}
@@ -337,10 +348,11 @@ func (m Model) updateViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 func (m Model) switchView(next view) (tea.Model, tea.Cmd) {
 	m.active = next
 	m.clearReveal()
+	m.holders = nil
 	m.notice, m.err = "", nil
 	switch next {
 	case viewHistory:
-		return m, revisionsCmd(m.deps.Store)
+		return m, tea.Batch(revisionsCmd(m.deps.Store, m.historyEntry), auditCmd(m.deps.AuditLog))
 	case viewAudit:
 		return m, auditCmd(m.deps.AuditLog)
 	}

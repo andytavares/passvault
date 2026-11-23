@@ -105,7 +105,7 @@ func (m Model) submitRollback() (tea.Model, tea.Cmd) {
 		m.notice = "rollback cancelled"
 		return m, nil
 	}
-	return m, rollbackCmd(m.deps.Store, target)
+	return m, rollbackCmd(m.deps.Store, target, m.historyEntry)
 }
 
 // submitAddSecret appends the picked field to the mapping file.
