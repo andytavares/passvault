@@ -106,6 +106,24 @@ func TestRecordStoresWhatAndWhenInUTC(t *testing.T) {
 	}
 }
 
+func TestRecordUsesRecorderDetailWhenDetailArgumentIsEmpty(t *testing.T) {
+	recorder := newRecorder(t, "github")
+	recorder.Detail = "terraform"
+	if err := recorder.Record("github", ActionUse, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := recorder.Record("github", ActionUse, "field token"); err != nil {
+		t.Fatal(err)
+	}
+	events, err := Read(recorder.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 2 || events[0].Detail != "terraform" || events[1].Detail != "field token" {
+		t.Fatalf("events = %+v", events)
+	}
+}
+
 func TestRecordStoresWhoAndCallers(t *testing.T) {
 	got := recordOne(t, newRecorder(t, "github"))
 	current, err := user.Current()

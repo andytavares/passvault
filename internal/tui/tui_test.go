@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
@@ -168,6 +169,29 @@ func TestRevealShowsValueThenTickRemasks(t *testing.T) {
 	}
 	if strings.Contains(viewText(m), "alpha-value") {
 		t.Error("view should be re-masked after the tick")
+	}
+}
+
+func TestRevealOfAuditedEntryRecordsViewEvent(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	auditPath := f.env.Paths.Audit()
+	f.deps.Store.Recorder = &audit.Recorder{
+		Path: auditPath, Via: "tui", Now: f.deps.Now,
+		Audited: func(entry string) bool { return entry == "alpha" },
+	}
+	m := f.loadModel(t)
+
+	_, cmd := m.Update(press("enter"))
+	if _, ok := revealFromBatch(t, cmd); !ok {
+		t.Fatal("enter did not reveal")
+	}
+	events, err := audit.Read(auditPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != audit.ActionView || events[0].Entry != "alpha" || events[0].Via != "tui" {
+		t.Fatalf("events = %+v", events)
 	}
 }
 

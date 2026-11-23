@@ -56,6 +56,7 @@ type Recorder struct {
 	Now     func() time.Time        // event time source
 	Audited func(entry string) bool // whether entry has the audit flag
 	Callers func() []Process        // nil means CallerChain(os.Getppid())
+	Detail  string                  // used when Record gets an empty detail
 }
 
 // Record appends one event when entry is audited. Audit-on and audit-off
@@ -66,6 +67,9 @@ func (r *Recorder) Record(entry string, action Action, detail string) error {
 	}
 	if action != ActionAuditOn && action != ActionAuditOff && !r.Audited(entry) {
 		return nil
+	}
+	if detail == "" {
+		detail = r.Detail
 	}
 	event, err := r.newEvent(entry, action, detail)
 	if err != nil {

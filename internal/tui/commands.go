@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
@@ -94,7 +95,7 @@ func opHealthy(source syncer.Source) bool {
 func revealCmd(st *store.Store, name string) tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg {
-			value, err := st.Show(context.Background(), name)
+			value, err := st.Show(context.Background(), name, audit.ActionView)
 			if err != nil {
 				return errMsg{err}
 			}

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 )
 
@@ -18,7 +19,7 @@ type Source interface {
 
 // Vault is the pass store. store.Store satisfies it.
 type Vault interface {
-	Show(ctx context.Context, name string) ([]byte, error)
+	Show(ctx context.Context, name string, action audit.Action) ([]byte, error)
 	Exists(name string) bool
 	Insert(ctx context.Context, name string, value []byte) error
 	Remove(ctx context.Context, name string) error
@@ -156,7 +157,7 @@ func (s *Syncer) checkEntry(ctx context.Context, secret mapping.Secret) Entry {
 		entry.Action = ActionAdd
 		return entry
 	}
-	vault, err := s.Vault.Show(ctx, secret.Pass)
+	vault, err := s.Vault.Show(ctx, secret.Pass, audit.ActionCompare)
 	if err != nil {
 		entry.Action, entry.Err = ActionFailed, err
 		return entry
@@ -308,7 +309,7 @@ func (s *Syncer) conflictOf(ctx context.Context, entry *Entry) Conflict {
 			if err != nil {
 				return nil, nil, err
 			}
-			vault, err := s.Vault.Show(ctx, entry.Secret.Pass)
+			vault, err := s.Vault.Show(ctx, entry.Secret.Pass, audit.ActionView)
 			if err != nil {
 				clear(source)
 				return nil, nil, err

@@ -1,11 +1,13 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/execx"
 	"github.com/atavares-klaviyo/pass-vault/internal/shellenv"
 )
@@ -29,7 +31,13 @@ func (a *app) runWithEnv(cmd *cobra.Command, entries, argv []string) error {
 		return err
 	}
 	vault := a.store()
-	pairs, err := shellenv.RunEnv(cmd.Context(), m, shellenv.RunRequest{Names: entries, Read: vault.Show})
+	vault.Recorder.Detail = argv[0]
+	pairs, err := shellenv.RunEnv(cmd.Context(), m, shellenv.RunRequest{
+		Names: entries,
+		Read: func(ctx context.Context, name string) ([]byte, error) {
+			return vault.Show(ctx, name, audit.ActionUse)
+		},
+	})
 	if err != nil {
 		return err
 	}

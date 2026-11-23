@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/execx"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
@@ -25,6 +26,8 @@ type app struct {
 	errOut io.Writer
 	// now is the clock; tests fix it to keep output deterministic.
 	now func() time.Time
+	// via is the subcommand name that audit events record.
+	via string
 }
 
 func newApp() *app {
@@ -39,7 +42,20 @@ func newApp() *app {
 }
 
 func (a *app) store() *store.Store {
-	return &store.Store{Runner: a.runner, Dir: a.paths.StoreDir}
+	return &store.Store{Runner: a.runner, Dir: a.paths.StoreDir, Recorder: a.recorder()}
+}
+
+// recorder logs reads and writes of the entries the mapping file marks audited.
+func (a *app) recorder() *audit.Recorder {
+	return &audit.Recorder{
+		Path: a.paths.Audit(),
+		Via:  a.via,
+		Now:  a.now,
+		Audited: func(name string) bool {
+			m, err := mapping.Load(a.paths.Mapping())
+			return err == nil && m.IsAudited(name)
+		},
+	}
 }
 
 func (a *app) opClient(m mapping.Mapping) *opcli.Client {
@@ -51,7 +67,14 @@ func (a *app) loadMapping() (mapping.Mapping, error) {
 	if errors.Is(err, os.ErrNotExist) {
 		return mapping.Mapping{}, fmt.Errorf("no mapping file at %s; run pvault mapping init", a.paths.Mapping())
 	}
-	return m, err
+	if err != nil {
+		return m, err
+	}
+	// A failed audit-flag sync must not fail the command: env runs at shell start.
+	if err := audit.SyncFlags(a.recorder(), a.paths.AuditFlags(), m.AuditedNames()); err != nil {
+		fmt.Fprintf(a.errOut, "pvault: audit log: %v\n", err)
+	}
+	return m, nil
 }
 
 func registerDataCommands(root *cobra.Command, a *app) {
@@ -61,6 +84,7 @@ func registerDataCommands(root *cobra.Command, a *app) {
 		a.statusCommand(),
 		a.envCommand(),
 		a.runCommand(),
+		a.getCommand(),
 		a.historyCommand(),
 		a.rollbackCommand(),
 		a.mappingCommand(),
