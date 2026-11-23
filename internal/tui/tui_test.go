@@ -58,6 +58,7 @@ func newFixture(t *testing.T) *fixture {
 		State:       func() (syncer.State, error) { return f.state, nil },
 		SaveState:   func(s syncer.State) error { f.state = s; return nil },
 		Now:         func() time.Time { return f.now },
+		AuditLog:    func() ([]audit.Event, error) { return audit.Read(env.Paths.Audit()) },
 	}
 	return f
 }
@@ -251,9 +252,11 @@ func TestTabAndArrowsSwitchViews(t *testing.T) {
 		{"right", viewHistory},
 		{"shift+tab", viewSync},
 		{"left", viewVault},
+		{"left", viewAudit},
 		{"left", viewEnv},
 		{"left", viewMapping},
 		{"tab", viewEnv},
+		{"tab", viewAudit},
 		{"tab", viewVault},
 	}
 	for _, step := range steps {

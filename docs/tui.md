@@ -5,7 +5,7 @@ gives it back when you quit.
 
 ```
  pvault ─ /Users/you/.password-store ─ 3 mapped · 1 unmanaged · 0 orphan  op ✓
-  Vault   Sync   History   Mapping   Env
+  Vault   Sync   History   Mapping   Env   Audit
 ──────────────────────────────────────────────────────────────────────────
 Entries                                           │ pagerduty-api-key
 ▸ pagerduty-api-key            ● synced 2h        │
@@ -122,12 +122,13 @@ Open a new shell to load the change; a running shell keeps the variables it alre
 ## Audit
 
 Lists audit events, newest first. The detail pane shows who read or changed the
-entry, with what process, and when.
+entry, with what process, and when. The view reads only the audit log; it never
+decrypts.
 
 | Key | Action |
 |---|---|
 | `j`/`k` | move |
-| `f` | step the entry filter through all entries and each audited entry |
+| `f` | step the entry filter through each entry in the log, then back to all entries |
 
 ## Known issues
 

@@ -14,6 +14,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
@@ -31,6 +32,7 @@ type Deps struct {
 	SaveState   func(syncer.State) error
 	Now         func() time.Time
 	Editor      func(path string) *exec.Cmd
+	AuditLog    func() ([]audit.Event, error)
 }
 
 // ItemSource lists 1Password items and their fields, without values.
@@ -62,11 +64,12 @@ const (
 	viewHistory
 	viewMapping
 	viewEnv
+	viewAudit
 	viewCount
 )
 
 // viewNames label the tab bar, in view order.
-var viewNames = [viewCount]string{"Vault", "Sync", "History", "Mapping", "Env"}
+var viewNames = [viewCount]string{"Vault", "Sync", "History", "Mapping", "Env", "Audit"}
 
 // promptKind is the active modal input, if any.
 type promptKind int
@@ -138,6 +141,12 @@ type Model struct {
 	planRemoved  []string
 	planTarget   string
 
+	// auditEvents are newest first; auditFilter is an entry name, or empty
+	// for all entries.
+	auditEvents []audit.Event
+	auditCursor int
+	auditFilter string
+
 	mapCursor    int
 	envCursor    int
 	mapErrors    string
@@ -198,6 +207,8 @@ func (m Model) updateData(msg tea.Msg) (tea.Model, tea.Cmd, bool) {
 		m.history = msg.revisions
 	case revisionsMsg:
 		m.revisions, m.syncTags = msg.revisions, msg.tags
+	case auditMsg:
+		m.auditEvents, m.auditCursor = msg.events, 0
 	case itemsMsg:
 		m.pickerItems, m.pickerCursor = msg.items, 0
 	case fieldsMsg:
@@ -316,6 +327,8 @@ func (m Model) updateViewKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.updateMapping(msg)
 	case viewEnv:
 		return m.updateEnv(msg)
+	case viewAudit:
+		return m.updateAudit(msg)
 	}
 	return m, nil
 }
@@ -325,8 +338,11 @@ func (m Model) switchView(next view) (tea.Model, tea.Cmd) {
 	m.active = next
 	m.clearReveal()
 	m.notice, m.err = "", nil
-	if next == viewHistory {
+	switch next {
+	case viewHistory:
 		return m, revisionsCmd(m.deps.Store)
+	case viewAudit:
+		return m, auditCmd(m.deps.AuditLog)
 	}
 	return m, nil
 }

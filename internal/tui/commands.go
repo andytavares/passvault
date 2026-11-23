@@ -2,7 +2,7 @@ package tui
 
 import (
 	"context"
-
+	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -42,6 +42,7 @@ type (
 	fieldsMsg       struct{ item opcli.Item }
 	appendedMsg     struct{ name string }
 	editorDoneMsg   struct{ err error }
+	auditMsg        struct{ events []audit.Event }
 	errMsg          struct{ err error }
 )
 
@@ -130,6 +131,18 @@ func revisionsCmd(st *store.Store) tea.Cmd {
 			return errMsg{err}
 		}
 		return revisionsMsg{revisions, tags}
+	}
+}
+
+// auditCmd reads the audit log and returns its events newest first.
+func auditCmd(read func() ([]audit.Event, error)) tea.Cmd {
+	return func() tea.Msg {
+		events, err := read()
+		if err != nil {
+			return errMsg{err}
+		}
+		slices.Reverse(events)
+		return auditMsg{events}
 	}
 }
 

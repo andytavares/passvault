@@ -62,6 +62,8 @@ func (m Model) body() string {
 		return m.mappingView()
 	case viewEnv:
 		return m.envView()
+	case viewAudit:
+		return m.auditView()
 	}
 	return ""
 }

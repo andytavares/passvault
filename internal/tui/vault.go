@@ -129,14 +129,19 @@ func (m Model) startSync() (tea.Model, tea.Cmd) {
 
 // vaultView renders the entries list beside the detail pane.
 func (m Model) vaultView() string {
-	list := lipgloss.NewStyle().Width(entriesWidth).Render(m.entriesList())
-	detail := lipgloss.NewStyle().
+	return m.splitPane(m.entriesList(), m.detailPane())
+}
+
+// splitPane renders list in the left column and detail right of a rule.
+func (m Model) splitPane(list, detail string) string {
+	left := lipgloss.NewStyle().Width(entriesWidth).Render(list)
+	right := lipgloss.NewStyle().
 		Height(m.bodyHeight()).
 		Border(lipgloss.NormalBorder(), false, false, false, true).
 		BorderForeground(m.styles.dim.GetForeground()).
 		PaddingLeft(1).
-		Render(m.detailPane())
-	return lipgloss.JoinHorizontal(lipgloss.Top, list, detail)
+		Render(detail)
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 }
 
 // entriesList renders the left column of entry rows.
@@ -150,7 +155,11 @@ func (m Model) entriesList() string {
 }
 
 func (m Model) entryLine(index int, row syncer.StatusRow) string {
-	label := fmt.Sprintf("%s %-28s %s", cursorMark(index == m.cursor), row.Name, m.glyph(row))
+	auditMark := " "
+	if m.mapping.IsAudited(row.Name) {
+		auditMark = m.auditMark()
+	}
+	label := fmt.Sprintf("%s %-25s %s  %s", cursorMark(index == m.cursor), row.Name, auditMark, m.glyph(row))
 	return label + " " + m.statusLabel(row.Kind, age(row.SyncedAt, m.deps.Now()))
 }
 
@@ -161,6 +170,11 @@ func (m Model) glyph(row syncer.StatusRow) string {
 		return glyphs[syncer.KindMappedMissing]
 	}
 	return glyphs[row.Kind]
+}
+
+// auditMark flags an entry whose reveals and copies are logged.
+func (m Model) auditMark() string {
+	return m.styles.warn.Render("◉")
 }
 
 func cursorMark(selected bool) string {
@@ -202,6 +216,9 @@ func (m Model) detailFields(row syncer.StatusRow) []string {
 		fields = append(fields, "1Password  "+secret.Ref)
 	}
 	fields = append(fields, "Env        "+envOrDash(row.Env)+"  "+string(row.Scope))
+	if m.mapping.IsAudited(row.Name) {
+		fields = append(fields, "Audit      on · reveal and copy are logged")
+	}
 	fields = append(fields, "Value      "+m.valueText(row))
 	if !row.SyncedAt.IsZero() {
 		fields = append(fields, "Last sync  "+row.SyncedAt.Format("2006-01-02 15:04")+"  "+row.Tag)

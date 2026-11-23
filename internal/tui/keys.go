@@ -43,7 +43,9 @@ func (m Model) viewKeys() [][2]string {
 	case viewMapping:
 		return [][2]string{{"n", "new"}, {"e", "edit"}}
 	case viewEnv:
-		return [][2]string{{"n", "new"}, {"a", "add/rename env"}, {"space", "on/off"}, {"d", "remove env"}}
+		return [][2]string{{"n", "new"}, {"a", "add/rename env"}, {"space", "on/off"}, {"A", "audit on/off"}, {"d", "remove env"}}
+	case viewAudit:
+		return [][2]string{{"j/k", "move"}, {"f", "filter entry"}}
 	}
 	return nil
 }
