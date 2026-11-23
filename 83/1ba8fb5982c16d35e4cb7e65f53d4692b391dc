@@ -1,0 +1,23 @@
+internal/cli/preexec.go
+  s_0c980f0696e3f1::t_2129312b987ac8 23-25
+internal/tui/commands.go
+  s_0c980f0696e3f1::t_eb46ba55d0d93a 165,167,171-172
+internal/tui/vault.go
+  s_0c980f0696e3f1::t_077facdc5c76f6 62-71,74-76,142
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "831ba8fb5982c16d35e4cb7e65f53d4692b391dc",
+  "prompts": {},
+  "sessions": {
+    "s_0c980f0696e3f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28731cab-6273-4502-a308-0d40438478b7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
