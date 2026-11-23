@@ -149,7 +149,7 @@ pvault rollback REV [--entry NAME] [--yes]
 pvault mapping init
 pvault mapping path
 pvault mapping validate
-pvault mapping add --pass P --ref R [--env E] [--scope S] [--command C]…
+pvault mapping add --pass P --ref R [--env E] [--scope S] [--command C]… [--audit]
 ```
 
 | Subcommand | Does |

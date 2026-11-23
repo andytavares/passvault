@@ -26,6 +26,7 @@ type Secret struct {
 	Scope    Scope    `toml:"scope"`
 	Commands []string `toml:"commands"`
 	Enabled  *bool    `toml:"enabled"`
+	Audit    bool     `toml:"audit"`
 }
 
 // IsEnabled reports whether the env variable reaches the shell; a missing
@@ -51,6 +52,23 @@ func (m Mapping) Find(pass string) (Secret, bool) {
 	return Secret{}, false
 }
 
+// IsAudited reports whether the secret with the given pass path has audit set.
+func (m Mapping) IsAudited(pass string) bool {
+	secret, ok := m.Find(pass)
+	return ok && secret.Audit
+}
+
+// AuditedNames returns the pass paths of secrets with audit set, in file order.
+func (m Mapping) AuditedNames() []string {
+	var names []string
+	for _, secret := range m.Secrets {
+		if secret.Audit {
+			names = append(names, secret.Pass)
+		}
+	}
+	return names
+}
+
 // Example is the commented file that `pvault mapping init` and setup write.
 const Example = `# pvault mapping file. One [[secret]] table per 1Password field to copy into pass.
 # Docs: docs/mapping.md in the pvault repo. Validate with: pvault mapping validate
@@ -62,6 +80,7 @@ version = 1
 # ref  = "op://Private/PagerDuty/credential"   # 1Password: field menu > Copy Secret Reference
 # env  = "PAGERDUTY_API_KEY"                   # optional: environment variable name
 # scope = "global"                             # global (default) | command | none
+# audit = true    # optional: log every use, view and change (pvault audit)
 
 # [[secret]]
 # pass     = "work/github-token"

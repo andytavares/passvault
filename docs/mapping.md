@@ -6,7 +6,7 @@ The mapping file lists which 1Password fields pvault copies into pass. It lives 
 in any of three ways:
 
 - edit the file by hand;
-- `pvault mapping add --pass … --ref … [--env …] [--scope …] [--command …]`, which
+- `pvault mapping add --pass … --ref … [--env …] [--scope …] [--command …] [--audit]`, which
   validates before appending (see [commands.md](commands.md#mapping));
 - in the TUI, open the Mapping tab and press `n` to pick an item and field from 1Password (see
   [tui.md](tui.md#mapping)).
@@ -41,6 +41,8 @@ Each `[[secret]]` table:
 - `enabled` (optional): `false` keeps the variable out of the shell and out of
   `pvault run`, but keeps `scope` and `commands` for when you turn it back on. The
   secret still syncs. Default `true`.
+- `audit` (optional): `true` makes pvault log every use, view and change of the
+  entry; see `pvault audit`. Default `false`.
 
 ## Getting a reference
 

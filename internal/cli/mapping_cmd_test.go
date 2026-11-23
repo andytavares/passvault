@@ -113,3 +113,20 @@ func TestMappingAddRejectsDuplicate(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 }
+
+func TestMappingAddAuditWritesAuditLine(t *testing.T) {
+	f := newCliFixture(t, "")
+	f.writeMapping(t, pagerduty)
+	err := f.run(f.app.mappingCommand(), "add",
+		"--pass", "work/github-token", "--ref", "op://Employee/GitHub PAT/token", "--audit")
+	if err != nil {
+		t.Fatalf("add: %v", err)
+	}
+	data, err := os.ReadFile(f.env.Paths.Mapping())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "audit = true") {
+		t.Fatalf("mapping missing audit = true:\n%s", data)
+	}
+}

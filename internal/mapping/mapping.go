@@ -286,6 +286,9 @@ func renderSecret(s Secret) string {
 	if !s.IsEnabled() {
 		lines = append(lines, "enabled = false")
 	}
+	if s.Audit {
+		lines = append(lines, "audit = true")
+	}
 	return strings.Join(lines, "\n") + "\n"
 }
 
