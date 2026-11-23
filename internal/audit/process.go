@@ -3,6 +3,8 @@ package audit
 import (
 	"bytes"
 	"encoding/binary"
+	"os"
+	"slices"
 
 	"golang.org/x/sys/unix"
 )
@@ -31,25 +33,76 @@ func CallerChain(pid int) []Process {
 	return chain
 }
 
-// processArgv reads kern.procargs2: int32 argc, the exec path, NUL padding,
-// then argc NUL-terminated arguments. Another user's process yields nil.
+// Holders lists the current user's processes, other than this one, whose
+// environment sets envName. It compares only the "envName=" prefix and never
+// copies the value.
+func Holders(envName string) ([]Process, error) {
+	infos, err := unix.SysctlKinfoProcSlice("kern.proc.uid", os.Getuid())
+	if err != nil {
+		return nil, err
+	}
+	prefix := []byte(envName + "=")
+	var holders []Process
+	for _, info := range infos {
+		pid := int(info.Proc.P_pid)
+		if pid == os.Getpid() {
+			continue
+		}
+		args, env := processArgsAndEnv(pid)
+		if !slices.ContainsFunc(env, func(field []byte) bool { return bytes.HasPrefix(field, prefix) }) {
+			continue
+		}
+		holders = append(holders, Process{
+			PID:  pid,
+			Comm: unix.ByteSliceToString(info.Proc.P_comm[:]),
+			Argv: cutArgs(toStrings(args)),
+		})
+	}
+	slices.SortFunc(holders, func(left, right Process) int { return left.PID - right.PID })
+	return holders, nil
+}
+
 func processArgv(pid int) []string {
+	args, _ := processArgsAndEnv(pid)
+	if args == nil {
+		return nil
+	}
+	return toStrings(args)
+}
+
+// processArgsAndEnv reads kern.procargs2: int32 argc, the exec path, NUL
+// padding, argc NUL-terminated arguments, then the environment strings.
+// Another user's process yields nil.
+func processArgsAndEnv(pid int) (args, env [][]byte) {
 	raw, err := unix.SysctlRaw("kern.procargs2", pid)
 	if err != nil || len(raw) < 4 {
-		return nil
+		return nil, nil
 	}
 	argc := int(binary.NativeEndian.Uint32(raw[:4]))
 	fields := bytes.Split(raw[4:], []byte{0})[1:]
 	for len(fields) > 0 && len(fields[0]) == 0 {
 		fields = fields[1:]
 	}
-	return cutArgs(fields[:min(argc, len(fields))])
+	argc = min(argc, len(fields))
+	return fields[:argc], fields[argc:]
 }
 
-func cutArgs(fields [][]byte) []string {
-	argv := make([]string, len(fields))
+func toStrings(fields [][]byte) []string {
+	out := make([]string, len(fields))
 	for index, field := range fields {
-		argv[index] = string(field[:min(len(field), maxArgBytes)])
+		out[index] = string(field)
 	}
-	return argv
+	return out
+}
+
+func cutArgs(argv []string) []string {
+	cut := make([]string, len(argv))
+	for index, arg := range argv {
+		cut[index] = cutArg(arg)
+	}
+	return cut
+}
+
+func cutArg(arg string) string {
+	return arg[:min(len(arg), maxArgBytes)]
 }
