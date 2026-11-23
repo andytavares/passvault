@@ -1,0 +1,35 @@
+internal/audit/redact_test.go
+  s_0c980f0696e3f1::t_ed831f30cf1e70 1-9,11-92,103,106-113,116-127
+  s_0c980f0696e3f1::t_0425ad4e7f47fc 10,93-102,104-105,114-115
+internal/audit/redact.go
+  s_0c980f0696e3f1::t_ed831f30cf1e70 1-2,9
+  s_0c980f0696e3f1::t_155eac126eff41 17
+  s_0c980f0696e3f1::t_ff2c37abe55d85 3-8,10-16,18-60
+internal/audit/audit.go
+  s_0c980f0696e3f1::t_1940c9df957f58 9,28-29,106
+  s_0c980f0696e3f1::t_1ccbf387b48207 30,58-63,95,99,103-105,107-117
+  s_0c980f0696e3f1::t_ed831f30cf1e70 64
+  s_0c980f0696e3f1::t_2a2bc376de33a1 118-119
+internal/audit/process.go
+  s_0c980f0696e3f1::t_ff2c37abe55d85 6-7,36-47,51,53-64,66,70-76,79,86-87,90-91,93,95,98-100,103
+  s_0c980f0696e3f1::t_2a2bc376de33a1 96,102
+  s_0c980f0696e3f1::t_ed831f30cf1e70 97
+  s_0c980f0696e3f1::t_1ccbf387b48207 48-50,52,67-69
+  s_0c980f0696e3f1::t_1940c9df957f58 101,104-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b52102a151052ee02cc4a1c713af24604c498629",
+  "prompts": {},
+  "sessions": {
+    "s_0c980f0696e3f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "28731cab-6273-4502-a308-0d40438478b7",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
