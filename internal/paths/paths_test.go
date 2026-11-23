@@ -33,3 +33,10 @@ func TestFromEnvOverrides(t *testing.T) {
 		t.Fatalf("overrides ignored: %+v", p)
 	}
 }
+
+func TestAuditFilesLiveInStateDir(t *testing.T) {
+	p := Paths{StateDir: "/s/pvault"}
+	if p.Audit() != "/s/pvault/audit.jsonl" || p.AuditFlags() != "/s/pvault/audit-flags.json" {
+		t.Fatalf("audit paths: %q %q", p.Audit(), p.AuditFlags())
+	}
+}
