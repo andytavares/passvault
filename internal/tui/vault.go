@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
@@ -58,24 +59,29 @@ func (m Model) applyTick(msg tickMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// vaultActions are the vault keys that act on the model alone.
+var vaultActions = map[string]func(Model) (tea.Model, tea.Cmd){
+	"enter": Model.toggleReveal,
+	"c":     Model.copySelected,
+	"d":     Model.startDelete,
+	"h":     Model.openEntryHistory,
+	"p":     Model.toggleHolders,
+	"s":     Model.startSync,
+}
+
 // updateVault handles keys in the vault view.
 func (m Model) updateVault(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if action, ok := vaultActions[msg.String()]; ok {
+		return action(m)
+	}
 	switch msg.String() {
 	case "up", "k":
 		return m.moveCursor(-1)
 	case "down", "j":
 		return m.moveCursor(1)
-	case "enter":
-		return m.toggleReveal()
-	case "c":
-		return m.copySelected()
 	case "n":
 		m.prompt, m.input = promptNewName, ""
 		return m, nil
-	case "d":
-		return m.startDelete()
-	case "s":
-		return m.startSync()
 	case "r":
 		return m, checkCmd(m.deps)
 	}
@@ -90,6 +96,7 @@ func (m Model) moveCursor(delta int) (tea.Model, tea.Cmd) {
 	}
 	m.cursor = next
 	m.clearReveal()
+	m.holders = nil
 	return m, historyCmd(m.deps.Store, m.rows[m.cursor].Name)
 }
 
@@ -104,6 +111,41 @@ func (m Model) toggleReveal() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	return m, revealCmd(m.deps.Store, row.Name)
+}
+
+// openEntryHistory opens History filtered to the selected entry.
+func (m Model) openEntryHistory() (tea.Model, tea.Cmd) {
+	row, ok := m.selectedRow()
+	if !ok {
+		return m, nil
+	}
+	m.historyEntry, m.revCursor = row.Name, 0
+	return m.switchView(viewHistory)
+}
+
+// toggleHolders lists the processes started with the selected global
+// entry's env variable, or hides the list when shown.
+func (m Model) toggleHolders() (tea.Model, tea.Cmd) {
+	row, ok := m.selectedRow()
+	if !ok {
+		return m, nil
+	}
+	if m.holders != nil {
+		m.holders = nil
+		return m, nil
+	}
+	secret, found := m.mapping.Find(row.Name)
+	if !found || secret.Scope != mapping.ScopeGlobal || secret.Env == "" || !secret.IsEnabled() {
+		m.notice = "p works on global entries with an env variable"
+		return m, nil
+	}
+	return m, holdersCmd(m.deps.Holders, holdersMsg{name: row.Name, env: secret.Env})
+}
+
+// applyHolders stores the processes for the detail pane.
+func (m Model) applyHolders(msg holdersMsg) (tea.Model, tea.Cmd) {
+	m.holders = &msg
+	return m, nil
 }
 
 func (m Model) copySelected() (tea.Model, tea.Cmd) {
@@ -212,7 +254,41 @@ func (m Model) detailPane() string {
 	lines = append(lines, m.detailFields(row)...)
 	lines = append(lines, "", m.styles.dim.Render("History"))
 	lines = append(lines, m.historyLines()...)
+	lines = append(lines, m.holderLines(row.Name, m.bodyHeight()-len(lines))...)
 	return strings.Join(lines, "\n")
+}
+
+// holderLines list the processes started with the entry's env variable,
+// once p has loaded them for this entry, in at most room lines.
+func (m Model) holderLines(name string, room int) []string {
+	if m.holders == nil || m.holders.name != name {
+		return nil
+	}
+	processes := m.holders.processes
+	summary := fmt.Sprintf("Held by    %d processes started with %s", len(processes), m.holders.env)
+	if len(processes) == 0 {
+		summary = "Held by    no process started with " + m.holders.env
+	}
+	// blank, summary, the "more" line and the macOS note take four lines.
+	shown := processes[:min(len(processes), max(0, room-4))]
+	lines := append([]string{"", summary}, processLines(shown)...)
+	if hidden := len(processes) - len(shown); hidden > 0 {
+		lines = append(lines, m.styles.dim.Render(fmt.Sprintf("  %d more not shown", hidden)))
+	}
+	return append(lines, m.styles.dim.Render("macOS hides Apple's own programs"))
+}
+
+// processLines renders each process as its right-aligned pid and command.
+func processLines(processes []audit.Process) []string {
+	width := 0
+	for _, process := range processes {
+		width = max(width, len(fmt.Sprint(process.PID)))
+	}
+	lines := make([]string, len(processes))
+	for i, process := range processes {
+		lines[i] = fmt.Sprintf("  %*d  %s", width, process.PID, callerCommand(process))
+	}
+	return lines
 }
 
 func (m Model) detailFields(row syncer.StatusRow) []string {
@@ -258,5 +334,3 @@ func envOrDash(value string) string {
 	}
 	return value
 }
-
-var _ = mapping.Secret{}

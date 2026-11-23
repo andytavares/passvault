@@ -196,7 +196,7 @@ func TestHistoryTabLoadsCommits(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("opening History should load commits")
 	}
-	m = update(t, next.(Model), cmd())
+	m = applyCmd(t, next.(Model), cmd)
 	if len(m.revisions) == 0 || !strings.Contains(viewText(m), m.revisions[0].Short) {
 		t.Errorf("History should list commits:\n%s", viewText(m))
 	}

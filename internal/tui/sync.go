@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/store"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 )
 
@@ -92,7 +93,7 @@ func syncCmd(m *Model) tea.Cmd {
 		if err != nil {
 			return errMsg{err}
 		}
-		s := syncer.Syncer{Source: deps.Source, Vault: deps.Store, State: &state, Now: deps.Now, Decider: decider}
+		s := syncer.Syncer{Source: deps.Source, Vault: syncStore(deps.Store), State: &state, Now: deps.Now, Decider: decider}
 		report, err := s.Sync(context.Background(), mapping, syncer.SyncOptions{})
 		if err != nil {
 			return errMsg{err}
@@ -104,6 +105,18 @@ func syncCmd(m *Model) tea.Cmd {
 		}
 		return syncDoneMsg{added: report.Added + report.Updated, unchanged: report.Unchanged, skipped: report.Skipped}
 	}
+}
+
+// syncStore copies st so its audit events log via "sync"; the TUI's own
+// reads and writes keep their Via.
+func syncStore(st *store.Store) *store.Store {
+	copied := *st
+	if st.Recorder != nil {
+		recorder := *st.Recorder
+		recorder.Via = "sync"
+		copied.Recorder = &recorder
+	}
+	return &copied
 }
 
 // openConflict opens the modal and wires the reveal channel.

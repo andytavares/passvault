@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -29,18 +28,43 @@ func appendEvent(path string, event Event) error {
 		return err
 	}
 	defer unix.Flock(int(file.Fd()), unix.LOCK_UN)
-	content, err := io.ReadAll(file)
+	last, err := lastLine(file)
 	if err != nil {
 		return err
 	}
-	lines := splitLines(content)
-	event.Prev = chainHash(lines)
+	event.Prev = chainHash(splitLines(last))
 	line, err := json.Marshal(event)
 	if err != nil {
 		return err
 	}
 	_, err = file.Write(append(line, '\n'))
 	return err
+}
+
+// tailChunkBytes is how much lastLine reads per step back from the end.
+const tailChunkBytes = 4096
+
+// lastLine returns the file's last line, without its newline, reading back
+// from the end so each append costs the same however long the log grows.
+func lastLine(file *os.File) ([]byte, error) {
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	end := info.Size()
+	var tail []byte
+	for start := end; start > 0; {
+		start = max(0, start-tailChunkBytes)
+		chunk := make([]byte, end-start-int64(len(tail)))
+		if _, err := file.ReadAt(chunk, start); err != nil {
+			return nil, err
+		}
+		tail = append(chunk, tail...)
+		if newline := bytes.LastIndexByte(bytes.TrimSuffix(tail, []byte("\n")), '\n'); newline >= 0 {
+			return tail[newline+1:], nil
+		}
+	}
+	return tail, nil
 }
 
 // chainHash is the Prev value for the line that follows lines.

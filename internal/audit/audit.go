@@ -6,6 +6,7 @@ package audit
 import (
 	"os"
 	"os/user"
+	"slices"
 	"time"
 )
 
@@ -24,6 +25,9 @@ const (
 	ActionRollback Action = "rollback"
 	ActionAuditOn  Action = "audit-on"
 	ActionAuditOff Action = "audit-off"
+	// ActionInherit means a shell command started with an audited global
+	// secret in its environment.
+	ActionInherit Action = "inherit"
 )
 
 // Process is one process in the chain that started pvault.
@@ -51,12 +55,13 @@ type Event struct {
 
 // Recorder writes events for audited entries to the log at Path.
 type Recorder struct {
-	Path    string                  // audit.jsonl
-	Via     string                  // pvault subcommand, e.g. "get", "tui"
-	Now     func() time.Time        // event time source
-	Audited func(entry string) bool // whether entry has the audit flag
-	Callers func() []Process        // nil means CallerChain(os.Getppid())
-	Detail  string                  // used when Record gets an empty detail
+	Path    string                   // audit.jsonl
+	Via     string                   // pvault subcommand, e.g. "get", "tui"
+	Now     func() time.Time         // event time source
+	Audited func(entry string) bool  // whether entry has the audit flag
+	Callers func() []Process         // nil means CallerChain(os.Getppid())
+	Detail  string                   // used when Record gets an empty detail
+	Known   func() map[string]string // env name → value to redact; nil means none
 }
 
 // Record appends one event when entry is audited. Audit-on and audit-off
@@ -87,11 +92,29 @@ func (r *Recorder) newEvent(entry string, action Action, detail string) (Event, 
 	if err != nil {
 		return Event{}, err
 	}
+	known := r.known()
 	return Event{
 		Time: r.Now().UTC(), Entry: entry, Action: action, Via: r.Via,
 		User: current.Username, UID: os.Getuid(), Host: host, PID: os.Getpid(),
-		Callers: r.callers(), Detail: detail,
+		Callers: r.redactedCallers(known), Detail: cutArg(Redact(detail, known)),
 	}, nil
+}
+
+// redactedCallers redacts each argument before the cut, so a cut never
+// leaves part of a secret behind.
+func (r *Recorder) redactedCallers(known map[string]string) []Process {
+	callers := slices.Clone(r.callers())
+	for index := range callers {
+		callers[index].Argv = cutArgs(RedactArgv(callers[index].Argv, known))
+	}
+	return callers
+}
+
+func (r *Recorder) known() map[string]string {
+	if r.Known == nil {
+		return nil
+	}
+	return r.Known()
 }
 
 func (r *Recorder) callers() []Process {

@@ -20,7 +20,35 @@ type Revision struct {
 	Subject string
 	Time    time.Time
 	Tags    []string
-	Files   []string
+	Changes []FileChange
+}
+
+// FileChange is one path a commit touched, with git's one-letter status.
+type FileChange struct {
+	Status string
+	Path   string
+}
+
+// Change describes what r did to entry: "added", "changed", "removed",
+// "rolled back", or "" when r did not touch entry.gpg.
+func (r Revision) Change(entry string) string {
+	for _, change := range r.Changes {
+		if change.Path != entry+".gpg" {
+			continue
+		}
+		if strings.HasPrefix(r.Subject, "pvault rollback") {
+			return "rolled back"
+		}
+		switch change.Status {
+		case "A":
+			return "added"
+		case "M", "R":
+			return "changed"
+		case "D":
+			return "removed"
+		}
+	}
+	return ""
 }
 
 // IsGitRepo reports whether Dir holds a git repository.
@@ -77,7 +105,7 @@ const historyFormat = "%H%x1f%h%x1f%s%x1f%aI%x1f%D%x1e"
 // History lists commits, newest first. With name set, only commits touching
 // name.gpg; with limit > 0, at most limit commits.
 func (s *Store) History(ctx context.Context, name string, limit int) ([]Revision, error) {
-	args := []string{"log", "--decorate=short", "--format=" + historyFormat, "--name-only"}
+	args := []string{"log", "--decorate=short", "--format=" + historyFormat, "--name-status"}
 	if limit > 0 {
 		args = append(args, "-n", strconv.Itoa(limit))
 	}
@@ -91,8 +119,8 @@ func (s *Store) History(ctx context.Context, name string, limit int) ([]Revision
 	return parseHistory(string(result.Stdout)), nil
 }
 
-// parseHistory reads git log --name-only output: one header line per commit
-// (fields split by \x1f, ended by \x1e), then one file per line.
+// parseHistory reads git log --name-status output: one header line per commit
+// (fields split by \x1f, ended by \x1e), then one status and path per line.
 func parseHistory(output string) []Revision {
 	var revisions []Revision
 	current := -1
@@ -103,10 +131,16 @@ func parseHistory(output string) []Revision {
 			continue
 		}
 		if line != "" && current >= 0 {
-			revisions[current].Files = append(revisions[current].Files, line)
+			revisions[current].Changes = append(revisions[current].Changes, parseFileChange(line))
 		}
 	}
 	return revisions
+}
+
+// parseFileChange reads one --name-status line ("M\tx.gpg", "R100\told.gpg\tnew.gpg").
+func parseFileChange(line string) FileChange {
+	fields := strings.Split(line, "\t")
+	return FileChange{Status: line[:1], Path: fields[len(fields)-1]}
 }
 
 func parseRevisionHeader(header string) Revision {
@@ -159,13 +193,13 @@ func (s *Store) Rollback(ctx context.Context, revision, entry string) (string, e
 	if err != nil {
 		return "", err
 	}
-	return hash, s.recordRollback(target, append(restored, removed...))
+	return hash, s.recordRollback("to "+target+" · commit "+hash, append(restored, removed...))
 }
 
 // recordRollback writes one rollback event per changed entry.
-func (s *Store) recordRollback(revision string, names []string) error {
+func (s *Store) recordRollback(detail string, names []string) error {
 	for _, name := range names {
-		if err := s.record(name, audit.ActionRollback, "to "+revision); err != nil {
+		if err := s.record(name, audit.ActionRollback, detail); err != nil {
 			return err
 		}
 	}

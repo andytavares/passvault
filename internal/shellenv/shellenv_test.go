@@ -159,6 +159,33 @@ func TestRenderAuditedCommandEntryReadsThroughPvaultGet(t *testing.T) {
 	}
 }
 
+func TestRenderAuditedGlobalAddsPreexecHookThroughPvault(t *testing.T) {
+	m := mapping.Mapping{Secrets: []mapping.Secret{
+		{Pass: "work/github", Env: "GITHUB_TOKEN", Scope: mapping.ScopeGlobal, Audit: true},
+	}}
+	request := ScriptRequest{Read: readValues(map[string][]byte{"work/github": []byte("v")}), Binary: "/Users/me/.local/bin/pvault"}
+	script, _ := RenderScript(context.Background(), m, request)
+	want := "export GITHUB_TOKEN='v'\n" +
+		"_pvault_preexec() { command '/Users/me/.local/bin/pvault' preexec -- \"$3\" >/dev/null 2>&1 &! }\n" +
+		"autoload -Uz add-zsh-hook\n" +
+		"add-zsh-hook preexec _pvault_preexec\n"
+	if script != want {
+		t.Fatalf("got %q, want %q", script, want)
+	}
+}
+
+func TestRenderWithoutAuditedGlobalHasNoPreexecHook(t *testing.T) {
+	m := mapping.Mapping{Secrets: []mapping.Secret{
+		{Pass: "plain", Env: "PLAIN", Scope: mapping.ScopeGlobal},
+		{Pass: "work/github", Env: "GITHUB_TOKEN", Scope: mapping.ScopeCommand, Commands: []string{"gh"}, Audit: true},
+	}}
+	request := ScriptRequest{Read: readValues(map[string][]byte{"plain": []byte("v")}), Binary: "/Users/me/.local/bin/pvault"}
+	script, _ := RenderScript(context.Background(), m, request)
+	if strings.Contains(script, "preexec") {
+		t.Fatalf("script has a preexec hook:\n%s", script)
+	}
+}
+
 func TestRenderOrderingAndEmpty(t *testing.T) {
 	m := mapping.Mapping{Secrets: []mapping.Secret{
 		{Pass: "z", Env: "ZED", Scope: mapping.ScopeGlobal},
