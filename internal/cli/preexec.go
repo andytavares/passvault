@@ -20,10 +20,9 @@ func (a *app) preexecCommand() *cobra.Command {
 	return cmd
 }
 
-// runPreexec records cmdline as inherited by each audited global secret set
-// in this shell; an export that failed at shell start is not logged. It
-// runs before every shell command, so it never reads the pass store and
-// ignores a missing or broken mapping.
+// runPreexec runs before every shell command, so it never reads the pass
+// store and ignores a broken mapping. A secret the shell lacks (its export
+// failed at shell start) is not logged.
 func (a *app) runPreexec(cmdline string) error {
 	if cmdline == "" {
 		return nil

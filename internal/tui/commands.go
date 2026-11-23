@@ -162,13 +162,14 @@ func auditCmd(read func() ([]audit.Event, error)) tea.Cmd {
 }
 
 // holdersCmd lists the processes started with env, for the entry name.
-func holdersCmd(holders func(string) ([]audit.Process, error), name, env string) tea.Cmd {
+func holdersCmd(holders func(string) ([]audit.Process, error), target holdersMsg) tea.Cmd {
 	return func() tea.Msg {
-		processes, err := holders(env)
+		processes, err := holders(target.env)
 		if err != nil {
 			return errMsg{err}
 		}
-		return holdersMsg{name: name, env: env, processes: processes}
+		target.processes = processes
+		return target
 	}
 }
 

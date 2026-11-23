@@ -59,28 +59,29 @@ func (m Model) applyTick(msg tickMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// vaultActions are the vault keys that act on the model alone.
+var vaultActions = map[string]func(Model) (tea.Model, tea.Cmd){
+	"enter": Model.toggleReveal,
+	"c":     Model.copySelected,
+	"d":     Model.startDelete,
+	"h":     Model.openEntryHistory,
+	"p":     Model.toggleHolders,
+	"s":     Model.startSync,
+}
+
 // updateVault handles keys in the vault view.
 func (m Model) updateVault(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	if action, ok := vaultActions[msg.String()]; ok {
+		return action(m)
+	}
 	switch msg.String() {
 	case "up", "k":
 		return m.moveCursor(-1)
 	case "down", "j":
 		return m.moveCursor(1)
-	case "enter":
-		return m.toggleReveal()
-	case "c":
-		return m.copySelected()
 	case "n":
 		m.prompt, m.input = promptNewName, ""
 		return m, nil
-	case "d":
-		return m.startDelete()
-	case "h":
-		return m.openEntryHistory()
-	case "p":
-		return m.toggleHolders()
-	case "s":
-		return m.startSync()
 	case "r":
 		return m, checkCmd(m.deps)
 	}
@@ -138,7 +139,7 @@ func (m Model) toggleHolders() (tea.Model, tea.Cmd) {
 		m.notice = "p works on global entries with an env variable"
 		return m, nil
 	}
-	return m, holdersCmd(m.deps.Holders, row.Name, secret.Env)
+	return m, holdersCmd(m.deps.Holders, holdersMsg{name: row.Name, env: secret.Env})
 }
 
 // applyHolders stores the processes for the detail pane.
