@@ -5,6 +5,7 @@ package shellenv
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -58,10 +59,29 @@ func RenderScript(ctx context.Context, m mapping.Mapping, request ScriptRequest)
 	for _, command := range commandOrder(m) {
 		lines = append(lines, commandFunction(command, m, request.Binary))
 	}
+	if slices.ContainsFunc(m.Secrets, IsAuditedGlobal) {
+		lines = append(lines, preexecHook(request.Binary)...)
+	}
 	if len(lines) == 0 {
 		return "", warnings
 	}
 	return strings.Join(lines, "\n") + "\n", warnings
+}
+
+// IsAuditedGlobal reports whether secret is exported to every shell and
+// marked audited, so each command typed in that shell is logged.
+func IsAuditedGlobal(secret mapping.Secret) bool {
+	return secret.Scope == mapping.ScopeGlobal && secret.Env != "" && secret.IsEnabled() && secret.Audit
+}
+
+// preexecHook runs `pvault preexec` in the background before each command,
+// so a slow log write never delays the prompt.
+func preexecHook(binary string) []string {
+	return []string{
+		"_pvault_preexec() { command " + Quote([]byte(binary)) + " preexec -- \"$3\" >/dev/null 2>&1 &! }",
+		"autoload -Uz add-zsh-hook",
+		"add-zsh-hook preexec _pvault_preexec",
+	}
 }
 
 // Snippet returns the zshrc body line that loads the environment when the

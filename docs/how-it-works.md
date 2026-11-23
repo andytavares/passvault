@@ -86,6 +86,12 @@ What pvault cannot protect:
   or reads of the `pass` git repo. The same user can edit the log.
   `pvault audit --verify` finds a changed or removed line in the middle, but not
   lines cut from the end.
+- **Redaction** in the audit log, before each detail and argument is cut to 120 bytes:
+  a value of a mapped env variable set in pvault's environment becomes `[NAME]`.
+  Token prefixes (`ghp_`, `gho_`, `github_pat_`, `sk-`, `xox*`, `AKIA`, `lin_api_`),
+  `Authorization` headers, `--password`/`--token`/`--secret`/`--api-key` values and
+  `NAME_TOKEN`/`KEY`/`SECRET`/`PASSWORD=value` become `[redacted]`. Other secrets in
+  a command line are logged as typed.
 
 ## Versioning and migrations
 

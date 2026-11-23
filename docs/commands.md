@@ -156,6 +156,7 @@ newer than a Go duration, such as `30m` or `24h`. With no events it prints
 |---|---|
 | `use` | `pvault get` or `pvault run` read the value |
 | `export` | a new shell exported a global entry |
+| `inherit` | a command typed in that shell started with the global entry in its environment |
 | `compare` | sync or check read the value to compare it |
 | `view` | the value was shown on screen |
 | `copy` | the value was copied to the clipboard |
@@ -164,6 +165,9 @@ newer than a Go duration, such as `30m` or `24h`. With no events it prints
 | `rollback` | a rollback restored the entry |
 | `audit-on` | the entry got `audit = true` |
 | `audit-off` | the entry lost `audit = true` |
+
+`inherit` events come from `pvault preexec`, an internal command that the zsh hook
+from `pvault env --zsh` runs before each command. Do not run it yourself.
 
 `--verify` checks the hash chain and ignores `NAME` and `--since`. It prints
 `OK, N events, chain intact`, or `line N: chain broken` and exits `1`.

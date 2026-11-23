@@ -55,7 +55,24 @@ func (a *app) recorder() *audit.Recorder {
 			m, err := mapping.Load(a.paths.Mapping())
 			return (err == nil && m.IsAudited(name)) || audit.WasAudited(a.paths.AuditFlags(), name)
 		},
+		Known: a.knownEnvValues,
 	}
+}
+
+// knownEnvValues maps each mapping env name set in this process to its value,
+// so the recorder logs [NAME] instead of the value.
+func (a *app) knownEnvValues() map[string]string {
+	m, err := mapping.Load(a.paths.Mapping())
+	if err != nil {
+		return nil
+	}
+	known := map[string]string{}
+	for _, secret := range m.Secrets {
+		if value := os.Getenv(secret.Env); secret.Env != "" && value != "" {
+			known[secret.Env] = value
+		}
+	}
+	return known
 }
 
 func (a *app) opClient(m mapping.Mapping) *opcli.Client {
@@ -87,6 +104,7 @@ func registerDataCommands(root *cobra.Command, a *app) {
 		a.getCommand(),
 		a.historyCommand(),
 		a.auditCommand(),
+		a.preexecCommand(),
 		a.rollbackCommand(),
 		a.mappingCommand(),
 	)
