@@ -1,0 +1,48 @@
+docs/tui.md
+  s_83fefd5b0a3f5a::t_e99049bda6ebb9 8,125-126,131
+internal/tui/styles.go
+  s_83fefd5b0a3f5a::t_b1bdaf27af1291 65-66
+internal/tui/vault.go
+  s_83fefd5b0a3f5a::t_e9cf18bade4408 132-138,143-144
+  s_83fefd5b0a3f5a::t_36d99293edd1ac 158-162,175-179,219-221
+internal/tui/audit_test.go
+  s_83fefd5b0a3f5a::t_4d78d6f1cff2df 1-28,32-33,36,38,40-134,139-143,152-155,172-187,191-218,221-230
+  s_83fefd5b0a3f5a::t_bab3ccc061c2cf 29-31,34-35,37,39,135-138,144-151,156-171,188-190,219-220
+internal/tui/commands.go
+  s_83fefd5b0a3f5a::t_36d99293edd1ac 5,45,137-145
+  s_83fefd5b0a3f5a::t_3b8abd4a1b2645 146-148
+internal/tui/tui.go
+  s_83fefd5b0a3f5a::t_b1bdaf27af1291 72,144-149,210-211,330-331,341-342,344-345
+  s_83fefd5b0a3f5a::t_c6990e50263d5a 17,35,67
+internal/tui/env.go
+  s_83fefd5b0a3f5a::t_36d99293edd1ac 28-31,37-53,134-144,214,218,274-278
+  s_83fefd5b0a3f5a::t_8402ddab738ecf 279-280
+internal/cli/tui_cmd.go
+  s_83fefd5b0a3f5a::t_962a75c7f279de 9,42
+internal/tui/audit.go
+  s_83fefd5b0a3f5a::t_3440ba450f03f6 1-129
+internal/tui/actions_test.go
+  s_83fefd5b0a3f5a::t_7102e9641fd17b 126
+internal/tui/tui_test.go
+  s_83fefd5b0a3f5a::t_39726a77d36919 61,255,259
+internal/tui/keys.go
+  s_83fefd5b0a3f5a::t_b1bdaf27af1291 46-48
+internal/tui/picker_test.go
+  s_83fefd5b0a3f5a::t_7102e9641fd17b 15,18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4ee343214d5c811e936d0b9e64e360426247bda7",
+  "prompts": {},
+  "sessions": {
+    "s_83fefd5b0a3f5a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f8cd4f19-86bd-400f-a51e-52c10d263440",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
