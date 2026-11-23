@@ -86,6 +86,7 @@ func registerDataCommands(root *cobra.Command, a *app) {
 		a.runCommand(),
 		a.getCommand(),
 		a.historyCommand(),
+		a.auditCommand(),
 		a.rollbackCommand(),
 		a.mappingCommand(),
 	)

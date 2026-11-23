@@ -136,11 +136,21 @@ event. If that write fails, it prints no value and exits `1`.
 pvault audit [NAME] [--since DURATION] [--json] [--verify]
 ```
 
-Lists audit events, newest first:
+Lists audit events, newest first, then a footer:
 
 ```
-TIME  ENTRY  ACTION  VIA  USER  WHAT
+TIME                 ENTRY       ACTION     VIA       USER      WHAT
+2026-11-23 11:30:00  work/github use        get       andrew    terraform plan ← -zsh ← login
+1 events · /Users/andrew/.local/state/pvault/audit.jsonl
 ```
+
+`TIME` is local time. `NAME` keeps only that entry's events. `--since` keeps events
+newer than a Go duration, such as `30m` or `24h`. With no events it prints
+`No audit events`. `--json` prints one JSON event per line, in the same order.
+
+`WHAT` is the caller chain, nearest process first; repeated callers show once. For
+`pvault run` it starts with the child command. For `write`, `delete`, `rollback`,
+`audit-on` and `audit-off` it is the event detail.
 
 | Action | Meaning |
 |---|---|
@@ -155,8 +165,8 @@ TIME  ENTRY  ACTION  VIA  USER  WHAT
 | `audit-on` | the entry got `audit = true` |
 | `audit-off` | the entry lost `audit = true` |
 
-`--verify` checks the hash chain. It prints `OK, N events, chain intact`, or
-`line N: chain broken` and exits `1`.
+`--verify` checks the hash chain and ignores `NAME` and `--since`. It prints
+`OK, N events, chain intact`, or `line N: chain broken` and exits `1`.
 
 ## history
 
