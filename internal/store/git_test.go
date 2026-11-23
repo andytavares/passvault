@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
 	"github.com/atavares-klaviyo/pass-vault/internal/testenv"
 )
@@ -33,7 +34,7 @@ func (g gitStore) insert(name, value string) {
 
 func (g gitStore) show(name string) string {
 	g.t.Helper()
-	got, err := g.Show(context.Background(), name)
+	got, err := g.Show(context.Background(), name, audit.ActionUse)
 	if err != nil {
 		g.t.Fatal(err)
 	}
@@ -281,5 +282,44 @@ func TestRollbackPlan(t *testing.T) {
 	}
 	if strings.Join(removed, ",") != "added" {
 		t.Fatalf("removed = %v", removed)
+	}
+}
+
+func TestInsertOverAuditedEntryRecordsChangedWithCommit(t *testing.T) {
+	s := newGitStore(t)
+	s.insert("github", "first")
+	path := withRecorder(t, s.Store, "github")
+
+	s.insert("github", "second")
+	events := readEvents(t, path)
+	want := "changed · commit " + s.head()[:7]
+	if len(events) != 1 || events[0].Action != audit.ActionWrite || events[0].Detail != want {
+		t.Fatalf("events = %+v, want detail %q", events, want)
+	}
+}
+
+func TestRollbackRecordsOneEventPerAuditedRestoredOrRemovedEntry(t *testing.T) {
+	s := newGitStore(t)
+	s.insert("github", "old")
+	s.insert("plain", "old")
+	head := s.head()
+	s.insert("github", "new")
+	s.insert("plain", "new")
+	s.insert("aws", "new")
+	path := withRecorder(t, s.Store, "github", "aws")
+
+	if _, err := s.Rollback(context.Background(), "HEAD~3", ""); err != nil {
+		t.Fatal(err)
+	}
+	events := readEvents(t, path)
+	if len(events) != 2 {
+		t.Fatalf("events = %+v", events)
+	}
+	got := []string{events[0].Entry + " " + string(events[0].Action) + " " + events[0].Detail,
+		events[1].Entry + " " + string(events[1].Action) + " " + events[1].Detail}
+	slices.Sort(got)
+	want := []string{"aws rollback to " + head[:7], "github rollback to " + head[:7]}
+	if !slices.Equal(got, want) {
+		t.Fatalf("events = %v, want %v", got, want)
 	}
 }

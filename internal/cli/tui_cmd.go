@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/syncer"
 	"github.com/atavares-klaviyo/pass-vault/internal/tui"
@@ -38,6 +39,7 @@ func (a *app) tuiDeps() tui.Deps {
 		SaveState:   func(state syncer.State) error { return syncer.SaveState(a.paths.State(), state) },
 		Now:         a.now,
 		Editor:      editorCommand,
+		AuditLog:    func() ([]audit.Event, error) { return audit.Read(a.paths.Audit()) },
 	}
 }
 

@@ -13,6 +13,7 @@ type uninstallFlags struct {
 	purgeVault bool
 	purgeKey   bool
 	keepConfig bool
+	purgeAudit bool
 	dryRun     bool
 	yes        bool
 }
@@ -26,6 +27,7 @@ func (a *app) uninstallCommand() *cobra.Command {
 	cmd.Flags().BoolVar(&flags.purgeVault, "purge-vault", false, "also remove the pass store")
 	cmd.Flags().BoolVar(&flags.purgeKey, "purge-key", false, "also delete the GPG key pvault created")
 	cmd.Flags().BoolVar(&flags.keepConfig, "keep-config", false, "keep the pvault config directory")
+	cmd.Flags().BoolVar(&flags.purgeAudit, "purge-audit", false, "also remove the audit log")
 	cmd.Flags().BoolVar(&flags.dryRun, "dry-run", false, "print the plan without removing")
 	cmd.Flags().BoolVar(&flags.yes, "yes", false, "skip the confirmation prompt")
 	return cmd
@@ -38,7 +40,7 @@ func (a *app) runUninstall(ctx context.Context, flags uninstallFlags) error {
 	}
 	opts := setup.UninstallOptions{
 		PurgeVault: flags.purgeVault, PurgeKey: flags.purgeKey,
-		KeepConfig: flags.keepConfig, DryRun: flags.dryRun,
+		KeepConfig: flags.keepConfig, PurgeAudit: flags.purgeAudit, DryRun: flags.dryRun,
 	}
 	plan, err := installer.Plan(ctx, opts)
 	if err != nil {

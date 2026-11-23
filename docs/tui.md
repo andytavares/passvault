@@ -5,7 +5,7 @@ gives it back when you quit.
 
 ```
  pvault ─ /Users/you/.password-store ─ 3 mapped · 1 unmanaged · 0 orphan  op ✓
-  Vault   Sync   History   Mapping   Env
+  Vault   Sync   History   Mapping   Env   Audit
 ──────────────────────────────────────────────────────────────────────────
 Entries                                           │ pagerduty-api-key
 ▸ pagerduty-api-key            ● synced 2h        │
@@ -44,6 +44,7 @@ masked value, last sync and git history.
 | `◐` | mapped, never synced |
 | `○` | unmanaged (in pass only) |
 | `✕` | orphan |
+| `◉` | audited: `enter` and `c` on it write an audit event |
 
 | Key | Action |
 |---|---|
@@ -114,8 +115,20 @@ Mapping view (`e`).
 | `a` | add or rename the env variable (upper-cased for you). On an entry with no `[[secret]]`, adds a local one |
 | `space` | turn the variable on or off (`enabled = false`) |
 | `d` | remove the env variable: type its name to confirm. A local entry's `[[secret]]` is removed; a 1Password entry keeps syncing |
+| `A` | turn the audit log on or off for the entry (`audit = true`) |
 
 Open a new shell to load the change; a running shell keeps the variables it already has.
+
+## Audit
+
+Lists audit events, newest first. The detail pane shows who read or changed the
+entry, with what process, and when. The view reads only the audit log; it never
+decrypts.
+
+| Key | Action |
+|---|---|
+| `j`/`k` | move |
+| `f` | step the entry filter through each entry in the log, then back to all entries |
 
 ## Known issues
 

@@ -16,8 +16,14 @@ func NewRoot() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.AddCommand(newVersionCommand())
 	application := newApp()
+	root.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
+		application.via = cmd.Name()
+		if cmd == root {
+			application.via = "tui"
+		}
+	}
+	root.AddCommand(newVersionCommand())
 	registerDataCommands(root, application)
 	registerSetupCommands(root, application)
 	registerTUICommand(root, application)

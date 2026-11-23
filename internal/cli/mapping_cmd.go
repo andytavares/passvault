@@ -69,6 +69,7 @@ type addFlags struct {
 	env      string
 	scope    string
 	commands []string
+	audit    bool
 }
 
 func (a *app) mappingAddCommand() *cobra.Command {
@@ -83,6 +84,7 @@ func (a *app) mappingAddCommand() *cobra.Command {
 	cmd.Flags().StringVar(&flags.env, "env", "", "environment variable name")
 	cmd.Flags().StringVar(&flags.scope, "scope", "", "global (default) | command | none")
 	cmd.Flags().StringArrayVar(&flags.commands, "command", nil, "command that gets the variable (scope command)")
+	cmd.Flags().BoolVar(&flags.audit, "audit", false, "log every use, view and change of this secret")
 	_ = cmd.MarkFlagRequired("pass")
 	_ = cmd.MarkFlagRequired("ref")
 	return cmd
@@ -95,6 +97,7 @@ func (a *app) runMappingAdd(flags addFlags) error {
 	secret := mapping.Secret{
 		Pass: flags.pass, Ref: flags.ref, Env: flags.env,
 		Scope: mapping.Scope(flags.scope), Commands: flags.commands,
+		Audit: flags.audit,
 	}
 	if err := mapping.AppendSecret(a.paths.Mapping(), secret); err != nil {
 		return err

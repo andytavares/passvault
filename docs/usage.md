@@ -153,6 +153,24 @@ pvault run --entry work/aws-key --entry github-token -- ./deploy.sh
   an error, and the command does not start.
 - pvault exits with the command's exit code.
 
+## Audit a secret
+
+Turn on the audit log for one entry in one of these ways:
+
+- set `audit = true` on its `[[secret]]` in the mapping;
+- run `pvault mapping add … --audit`;
+- press `A` on the entry in the TUI Env view.
+
+In scripts, read the value with `pvault get`, so each read is logged:
+
+```sh
+SECRET=$(pvault get NAME)
+```
+
+See the log with `pvault audit NAME` or the TUI Audit view.
+
+A global audited entry is logged once per new shell as `export`, not at each use.
+
 ## History and rollback
 
 The store's git history records every change. Sync tags mark each sync.

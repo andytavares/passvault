@@ -12,10 +12,10 @@ const pickerVaultsJSON = `[
 	{"id":"aws","title":"AWS Prod","vault":{"name":"Employee"}}
 ]`
 
-// openPicker switches to Mapping, presses n and applies the item list.
+// openPicker goes back three tabs to Mapping, presses n and applies the item list.
 func openPicker(t *testing.T, m Model) Model {
 	t.Helper()
-	m = update(t, update(t, m, press("shift+tab")), press("shift+tab"))
+	m = update(t, update(t, update(t, m, press("shift+tab")), press("shift+tab")), press("shift+tab"))
 	m = update(t, m, press("n"))
 	return update(t, m, itemsCmd(m.deps.Items)())
 }

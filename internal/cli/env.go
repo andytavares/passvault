@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/shellenv"
 )
 
@@ -27,7 +29,12 @@ func (a *app) runEnv(cmd *cobra.Command) {
 		return
 	}
 	vault := a.store()
-	script, warnings := shellenv.RenderScript(cmd.Context(), m, vault.Show)
+	script, warnings := shellenv.RenderScript(cmd.Context(), m, shellenv.ScriptRequest{
+		Read: func(ctx context.Context, name string) ([]byte, error) {
+			return vault.Show(ctx, name, audit.ActionExport)
+		},
+		Binary: a.paths.Binary(),
+	})
 	fmt.Fprint(a.out, script)
 	for _, warning := range warnings {
 		fmt.Fprintf(a.errOut, "pvault: skipped %s: %s\n", warning.Pass, warning.Reason)

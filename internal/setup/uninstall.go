@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/atavares-klaviyo/pass-vault/internal/block"
@@ -16,6 +17,7 @@ type UninstallOptions struct {
 	PurgeVault bool
 	PurgeKey   bool
 	KeepConfig bool
+	PurgeAudit bool
 	DryRun     bool
 }
 
@@ -47,6 +49,9 @@ func (in *Installer) Plan(ctx context.Context, opts UninstallOptions) (Uninstall
 		plan.Keep = append(plan.Keep, KeptItem{in.Paths.ConfigDir, "--keep-config"})
 	}
 	plan.Remove = append(plan.Remove, in.Paths.StateDir, in.Paths.Binary())
+	if !opts.PurgeAudit {
+		plan.Keep = append(plan.Keep, KeptItem{in.Paths.Audit(), "audit log; use --purge-audit to remove"})
+	}
 	if opts.PurgeVault {
 		plan.Remove = append(plan.Remove, in.Paths.StoreDir)
 	} else {
@@ -200,11 +205,32 @@ func (in *Installer) removeDirs(opts UninstallOptions) error {
 			return err
 		}
 	}
-	if err := os.RemoveAll(in.Paths.StateDir); err != nil {
+	if err := in.removeStateDir(opts); err != nil {
 		return err
 	}
 	if err := os.Remove(in.Paths.Binary()); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
+	}
+	return nil
+}
+
+// removeStateDir keeps audit.jsonl unless opts.PurgeAudit is set.
+func (in *Installer) removeStateDir(opts UninstallOptions) error {
+	if _, err := os.Stat(in.Paths.Audit()); opts.PurgeAudit || err != nil {
+		return os.RemoveAll(in.Paths.StateDir)
+	}
+	entries, err := os.ReadDir(in.Paths.StateDir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		path := filepath.Join(in.Paths.StateDir, entry.Name())
+		if path == in.Paths.Audit() {
+			continue
+		}
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
 	}
 	return nil
 }

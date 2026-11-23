@@ -131,13 +131,15 @@ It keeps by default:
 - packages that were already installed before setup;
 - the GPG key, even the one setup created;
 - the pass store and its history;
-- the `~/.zshrc.pvault-*` backups.
+- the `~/.zshrc.pvault-*` backups;
+- the audit log `~/.local/state/pvault/audit.jsonl`, unless you pass `--purge-audit`.
 
 | Flag | Effect |
 |---|---|
 | `--keep-config` | keep `~/.config/pvault` |
 | `--purge-key` | also delete the GPG key, only if setup created it |
 | `--purge-vault` | also delete the pass store. You must type the store path (full or `~/…`) to confirm |
+| `--purge-audit` | also delete the audit log |
 | `--yes` | skip the `Continue? [y/N]` prompt (not the vault path prompt) |
 | `--dry-run` | print the plan only |
 

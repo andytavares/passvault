@@ -25,20 +25,30 @@ func (m Model) updateEnv(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.prompt, m.input, m.pending = promptEnvName, secret.Env, name
 		}
 	case "space", "d":
-		if name == "" {
-			return m, nil
+		return m.toggleOrRemoveEnv(msg.String(), name, secret)
+	case "A":
+		if _, mapped := m.mapping.Find(name); mapped {
+			return m, m.toggleAudit(name, secret.Audit)
 		}
-		if secret.Env == "" {
-			m.notice = "no env var on " + name + "; press a to add"
-			return m, nil
-		}
-		if msg.String() == "d" {
-			m.prompt, m.pending = promptEnvRemove, name
-			return m, nil
-		}
-		return m, m.toggleEnv(name, secret.Env, secret.IsEnabled())
 	}
 	return m, nil
+}
+
+// toggleOrRemoveEnv turns the env variable on or off (space) or asks to
+// remove it (d).
+func (m Model) toggleOrRemoveEnv(key, name string, secret mapping.Secret) (tea.Model, tea.Cmd) {
+	if name == "" {
+		return m, nil
+	}
+	if secret.Env == "" {
+		m.notice = "no env var on " + name + "; press a to add"
+		return m, nil
+	}
+	if key == "d" {
+		m.prompt, m.pending = promptEnvRemove, name
+		return m, nil
+	}
+	return m, m.toggleEnv(name, secret.Env, secret.IsEnabled())
 }
 
 // envEntries lists every vault entry and every mapped pass, sorted, so a
@@ -121,6 +131,17 @@ func (m Model) toggleEnv(name, env string, enabled bool) tea.Cmd {
 	})
 }
 
+// toggleAudit turns the audit flag of the entry's secret on or off.
+func (m Model) toggleAudit(name string, audited bool) tea.Cmd {
+	note := "audit " + name + " on"
+	if audited {
+		note = "audit " + name + " off"
+	}
+	return m.editSecretCmd(name, note, func(secret *mapping.Secret) {
+		secret.Audit = !secret.Audit
+	})
+}
+
 // submitEnvName sets or renames the env variable of the prompt's entry.
 func (m Model) submitEnvName() (tea.Model, tea.Cmd) {
 	name, env := m.pending, strings.ToUpper(strings.TrimSpace(m.input))
@@ -190,11 +211,11 @@ func (m Model) envPromptText() string {
 
 // envView renders one row per entry with its env variable settings.
 func (m Model) envView() string {
-	rows := [][]string{{" ", "ENTRY", "ENV", "SCOPE", "STATE", "SOURCE"}}
+	rows := [][]string{{" ", "ENTRY", "ENV", "SCOPE", "STATE", "AUDIT", "SOURCE"}}
 	for i, name := range m.envEntries() {
 		secret, ok := m.mapping.Find(name)
 		rows = append(rows, []string{cursorMark(i == m.envCursor), name, envName(secret),
-			envScope(secret), m.envState(secret), envSource(secret, ok)})
+			envScope(secret), m.envState(secret), m.envAudit(secret), envSource(secret, ok)})
 	}
 	table := alignColumns(rows)
 	table[0] = m.styles.dim.Render(table[0])
@@ -248,6 +269,13 @@ func (m Model) envState(secret mapping.Secret) string {
 		return m.styles.ok.Render("●") + " on"
 	}
 	return m.styles.warn.Render("○") + " off"
+}
+
+func (m Model) envAudit(secret mapping.Secret) string {
+	if secret.Audit {
+		return m.auditMark() + " on"
+	}
+	return "—"
 }
 
 func envSource(secret mapping.Secret, hasSecret bool) string {

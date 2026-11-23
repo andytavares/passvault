@@ -46,6 +46,12 @@ func (p Paths) Manifest() string { return filepath.Join(p.StateDir, "manifest.js
 // State records the last sync of each managed entry.
 func (p Paths) State() string { return filepath.Join(p.StateDir, "state.json") }
 
+// Audit is the append-only, hash-chained log of secret access.
+func (p Paths) Audit() string { return filepath.Join(p.StateDir, "audit.jsonl") }
+
+// AuditFlags records which entries had the audit flag at the last sync.
+func (p Paths) AuditFlags() string { return filepath.Join(p.StateDir, "audit-flags.json") }
+
 // Binary is the installed pvault executable.
 func (p Paths) Binary() string { return filepath.Join(p.BinDir, "pvault") }
 

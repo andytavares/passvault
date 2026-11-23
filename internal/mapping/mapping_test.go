@@ -336,3 +336,33 @@ func TestReplaceAndRemoveKeepNextTableComment(t *testing.T) {
 		t.Fatalf("remove got:\n%q\nwant:\n%q", data, head+tail)
 	}
 }
+
+func TestParseAuditMarksAuditedSecretsInFileOrder(t *testing.T) {
+	m, err := Parse([]byte("version = 1\n[[secret]]\npass = \"b\"\nenv = \"B\"\naudit = true\n[[secret]]\npass = \"c\"\nenv = \"C\"\n[[secret]]\npass = \"a\"\nenv = \"A\"\naudit = true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(m.AuditedNames(), ","); got != "b,a" {
+		t.Fatalf("AuditedNames = %q, want %q", got, "b,a")
+	}
+	if !m.IsAudited("b") || m.IsAudited("c") || m.IsAudited("missing") {
+		t.Fatalf("IsAudited b, c, missing = %v, %v, %v; want true, false, false", m.IsAudited("b"), m.IsAudited("c"), m.IsAudited("missing"))
+	}
+}
+
+func TestAppendAuditedGlobalSecretRoundTrips(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "mapping.toml")
+	if err := os.WriteFile(path, []byte("version = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := AppendSecret(path, Secret{Pass: "pagerduty-api-key", Ref: "op://Private/PagerDuty/credential", Env: "PAGERDUTY_API_KEY", Audit: true}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := m.Find("pagerduty-api-key"); !got.Audit || got.Scope != ScopeGlobal {
+		t.Fatalf("loaded %+v, want Audit with global scope", got)
+	}
+}

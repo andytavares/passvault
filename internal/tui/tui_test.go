@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
@@ -57,6 +58,7 @@ func newFixture(t *testing.T) *fixture {
 		State:       func() (syncer.State, error) { return f.state, nil },
 		SaveState:   func(s syncer.State) error { f.state = s; return nil },
 		Now:         func() time.Time { return f.now },
+		AuditLog:    func() ([]audit.Event, error) { return audit.Read(env.Paths.Audit()) },
 	}
 	return f
 }
@@ -171,6 +173,29 @@ func TestRevealShowsValueThenTickRemasks(t *testing.T) {
 	}
 }
 
+func TestRevealOfAuditedEntryRecordsViewEvent(t *testing.T) {
+	f := newFixture(t)
+	f.env.Insert(t, "alpha", "alpha-value")
+	auditPath := f.env.Paths.Audit()
+	f.deps.Store.Recorder = &audit.Recorder{
+		Path: auditPath, Via: "tui", Now: f.deps.Now,
+		Audited: func(entry string) bool { return entry == "alpha" },
+	}
+	m := f.loadModel(t)
+
+	_, cmd := m.Update(press("enter"))
+	if _, ok := revealFromBatch(t, cmd); !ok {
+		t.Fatal("enter did not reveal")
+	}
+	events, err := audit.Read(auditPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].Action != audit.ActionView || events[0].Entry != "alpha" || events[0].Via != "tui" {
+		t.Fatalf("events = %+v", events)
+	}
+}
+
 // revealFromBatch runs a reveal command batch and returns the revealMsg.
 func revealFromBatch(t *testing.T, cmd tea.Cmd) (revealMsg, bool) {
 	t.Helper()
@@ -227,9 +252,11 @@ func TestTabAndArrowsSwitchViews(t *testing.T) {
 		{"right", viewHistory},
 		{"shift+tab", viewSync},
 		{"left", viewVault},
+		{"left", viewAudit},
 		{"left", viewEnv},
 		{"left", viewMapping},
 		{"tab", viewEnv},
+		{"tab", viewAudit},
 		{"tab", viewVault},
 	}
 	for _, step := range steps {

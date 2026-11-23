@@ -2,11 +2,12 @@ package tui
 
 import (
 	"context"
-
+	"slices"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/mapping"
 	"github.com/atavares-klaviyo/pass-vault/internal/opcli"
 	"github.com/atavares-klaviyo/pass-vault/internal/store"
@@ -41,6 +42,7 @@ type (
 	fieldsMsg       struct{ item opcli.Item }
 	appendedMsg     struct{ name string }
 	editorDoneMsg   struct{ err error }
+	auditMsg        struct{ events []audit.Event }
 	errMsg          struct{ err error }
 )
 
@@ -94,7 +96,7 @@ func opHealthy(source syncer.Source) bool {
 func revealCmd(st *store.Store, name string) tea.Cmd {
 	return tea.Batch(
 		func() tea.Msg {
-			value, err := st.Show(context.Background(), name)
+			value, err := st.Show(context.Background(), name, audit.ActionView)
 			if err != nil {
 				return errMsg{err}
 			}
@@ -129,6 +131,18 @@ func revisionsCmd(st *store.Store) tea.Cmd {
 			return errMsg{err}
 		}
 		return revisionsMsg{revisions, tags}
+	}
+}
+
+// auditCmd reads the audit log and returns its events newest first.
+func auditCmd(read func() ([]audit.Event, error)) tea.Cmd {
+	return func() tea.Msg {
+		events, err := read()
+		if err != nil {
+			return errMsg{err}
+		}
+		slices.Reverse(events)
+		return auditMsg{events}
 	}
 }
 

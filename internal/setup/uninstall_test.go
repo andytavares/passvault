@@ -220,3 +220,41 @@ func TestUninstallKeepConfig(t *testing.T) {
 		t.Error("state kept")
 	}
 }
+
+func TestUninstallKeepsAuditLogByDefault(t *testing.T) {
+	env := testenv.New(t)
+	manifest := runSetup(t, env)
+	auditLog := env.Paths.Audit()
+	writeFile(t, auditLog, "{}\n")
+	writeFile(t, env.Paths.State(), "{}\n")
+	inst := uninstaller(env, manifest, nil)
+	plan, err := inst.Plan(context.Background(), setup.UninstallOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasKeep(plan, auditLog, "use --purge-audit to remove") {
+		t.Fatalf("plan %+v", plan)
+	}
+	if err := inst.Uninstall(context.Background(), setup.UninstallOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(auditLog); err != nil {
+		t.Error("audit log removed without PurgeAudit")
+	}
+	if _, err := os.Stat(env.Paths.State()); !os.IsNotExist(err) {
+		t.Error("state.json kept")
+	}
+}
+
+func TestUninstallPurgeAuditRemovesStateDir(t *testing.T) {
+	env := testenv.New(t)
+	manifest := runSetup(t, env)
+	writeFile(t, env.Paths.Audit(), "{}\n")
+	inst := uninstaller(env, manifest, nil)
+	if err := inst.Uninstall(context.Background(), setup.UninstallOptions{PurgeAudit: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(env.Paths.StateDir); !os.IsNotExist(err) {
+		t.Error("state dir kept with PurgeAudit")
+	}
+}

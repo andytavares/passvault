@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 )
 
 // Revision is one commit in the store's history.
@@ -139,13 +141,35 @@ func (s *Store) Rollback(ctx context.Context, revision, entry string) (string, e
 	if err := s.checkGpgID(ctx, revision); err != nil {
 		return "", err
 	}
+	restored, removed, err := s.RollbackPlan(ctx, revision, entry)
+	if err != nil {
+		return "", err
+	}
+	target, err := s.commitOf(ctx, revision)
+	if err != nil {
+		return "", err
+	}
 	if err := s.restore(ctx, revision, entry); err != nil {
 		return "", err
 	}
 	if dirty, err := s.Dirty(ctx); err != nil || !dirty {
 		return "", err
 	}
-	return s.commitRollback(ctx, revision, entry)
+	hash, err := s.commitRollback(ctx, revision, entry)
+	if err != nil {
+		return "", err
+	}
+	return hash, s.recordRollback(target, append(restored, removed...))
+}
+
+// recordRollback writes one rollback event per changed entry.
+func (s *Store) recordRollback(revision string, names []string) error {
+	for _, name := range names {
+		if err := s.record(name, audit.ActionRollback, "to "+revision); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // checkGpgID refuses rollback when the store was encrypted to a different
@@ -245,4 +269,14 @@ func splitLines(output string) []string {
 		}
 	}
 	return lines
+}
+
+// commitOf returns the short hash revision names now; a relative revision
+// such as HEAD~1 names another commit once the rollback commit exists.
+func (s *Store) commitOf(ctx context.Context, revision string) (string, error) {
+	result, err := s.Runner.Run(ctx, GitCmd(s.Dir, "rev-parse", "--verify", revision+"^{commit}"))
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(result.Stdout))[:7], nil
 }

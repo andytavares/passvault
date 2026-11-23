@@ -4,19 +4,22 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/atavares-klaviyo/pass-vault/internal/audit"
 	"github.com/atavares-klaviyo/pass-vault/internal/execx"
 )
 
 // Store is one pass store directory.
 type Store struct {
-	Runner execx.Runner
-	Dir    string
+	Runner   execx.Runner
+	Dir      string
+	Recorder *audit.Recorder
 }
 
 // passCmd builds a pass command with PASSWORD_STORE_DIR pinned to Dir.
@@ -33,8 +36,12 @@ func GitCmd(dir string, args ...string) execx.Cmd {
 	return execx.Cmd{Name: "git", Args: append([]string{"-C", dir}, args...)}
 }
 
-// Show returns the exact decrypted bytes of name.
-func (s *Store) Show(ctx context.Context, name string) ([]byte, error) {
+// Show records action for name in the audit log, then returns the exact
+// decrypted bytes of name. It does not decrypt when the record fails.
+func (s *Store) Show(ctx context.Context, name string, action audit.Action) ([]byte, error) {
+	if err := s.record(name, action, ""); err != nil {
+		return nil, err
+	}
 	result, err := s.Runner.Run(ctx, s.passCmd("show", name))
 	if err != nil {
 		return nil, err
@@ -50,16 +57,50 @@ func (s *Store) Exists(name string) bool {
 
 // Insert writes value as entry name, overwriting. Value goes via stdin only.
 func (s *Store) Insert(ctx context.Context, name string, value []byte) error {
+	existed := s.Exists(name)
 	cmd := s.passCmd("insert", "-m", "-f", name)
 	cmd.Stdin = value
-	_, err := s.Runner.Run(ctx, cmd)
-	return err
+	if _, err := s.Runner.Run(ctx, cmd); err != nil {
+		return err
+	}
+	detail, err := s.writeDetail(ctx, existed)
+	if err != nil {
+		return err
+	}
+	return s.record(name, audit.ActionWrite, detail)
+}
+
+// writeDetail says whether Insert added or changed the entry and, in a git
+// store, the short hash of the commit pass made.
+func (s *Store) writeDetail(ctx context.Context, existed bool) (string, error) {
+	detail := "added"
+	if existed {
+		detail = "changed"
+	}
+	if !s.IsGitRepo() {
+		return detail, nil
+	}
+	head, err := s.Head(ctx)
+	if err != nil {
+		return "", err
+	}
+	return detail + " · commit " + head[:7], nil
 }
 
 // Remove deletes entry name.
 func (s *Store) Remove(ctx context.Context, name string) error {
-	_, err := s.Runner.Run(ctx, s.passCmd("rm", "-f", name))
-	return err
+	if _, err := s.Runner.Run(ctx, s.passCmd("rm", "-f", name)); err != nil {
+		return err
+	}
+	return s.record(name, audit.ActionDelete, "")
+}
+
+// record writes one audit event for name; a nil Recorder records nothing.
+func (s *Store) record(name string, action audit.Action, detail string) error {
+	if err := s.Recorder.Record(name, action, detail); err != nil {
+		return fmt.Errorf("audit log: %w", err)
+	}
+	return nil
 }
 
 // List returns every entry name, sorted, without the .gpg suffix.
@@ -87,6 +128,9 @@ func (s *Store) List() ([]string, error) {
 
 // Copy puts entry name on the clipboard; pass clears it after 45 s.
 func (s *Store) Copy(ctx context.Context, name string) error {
+	if err := s.record(name, audit.ActionCopy, ""); err != nil {
+		return err
+	}
 	_, err := s.Runner.Run(ctx, s.passCmd("show", "-c", name))
 	return err
 }

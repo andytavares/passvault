@@ -27,17 +27,24 @@ func Quote(value []byte) string {
 	return "'" + strings.ReplaceAll(string(value), "'", `'\''`) + "'"
 }
 
+// ScriptRequest says how RenderScript reads global entries and which pvault
+// binary the wrappers of audited command entries call.
+type ScriptRequest struct {
+	Read   ReadSecret
+	Binary string
+}
+
 // RenderScript returns the zsh script: exports for global secrets, then one wrapper
 // function per command. A read error or a NUL byte skips the entry with a
 // warning; RenderScript never fails. Command-scope secrets are not read here.
-func RenderScript(ctx context.Context, m mapping.Mapping, read ReadSecret) (string, []Warning) {
+func RenderScript(ctx context.Context, m mapping.Mapping, request ScriptRequest) (string, []Warning) {
 	var lines []string
 	var warnings []Warning
 	for _, secret := range m.Secrets {
 		if secret.Scope != mapping.ScopeGlobal || secret.Env == "" || !secret.IsEnabled() {
 			continue
 		}
-		value, err := read(ctx, secret.Pass)
+		value, err := request.Read(ctx, secret.Pass)
 		if err != nil {
 			warnings = append(warnings, Warning{secret.Pass, err.Error()})
 			continue
@@ -49,7 +56,7 @@ func RenderScript(ctx context.Context, m mapping.Mapping, read ReadSecret) (stri
 		lines = append(lines, "export "+secret.Env+"="+Quote(value))
 	}
 	for _, command := range commandOrder(m) {
-		lines = append(lines, commandFunction(command, m))
+		lines = append(lines, commandFunction(command, m, request.Binary))
 	}
 	if len(lines) == 0 {
 		return "", warnings
@@ -137,7 +144,7 @@ func commandOrder(m mapping.Mapping) []string {
 
 // commandFunction renders one wrapper function that sets every command-scope
 // variable of command for that one invocation only.
-func commandFunction(command string, m mapping.Mapping) string {
+func commandFunction(command string, m mapping.Mapping, binary string) string {
 	var assignments []string
 	for _, secret := range m.Secrets {
 		if secret.Scope != mapping.ScopeCommand || secret.Env == "" || !secret.IsEnabled() {
@@ -145,9 +152,18 @@ func commandFunction(command string, m mapping.Mapping) string {
 		}
 		for _, c := range secret.Commands {
 			if c == command {
-				assignments = append(assignments, secret.Env+"=\"$(command pass show "+Quote([]byte(secret.Pass))+")\"")
+				assignments = append(assignments, secret.Env+"=\"$("+readCommand(secret, binary)+")\"")
 			}
 		}
 	}
 	return command + "() { " + strings.Join(assignments, " ") + " command " + command + " \"$@\"; }"
+}
+
+// readCommand is the shell command a wrapper runs to read secret. Audited
+// entries go through `pvault get` so each read is logged.
+func readCommand(secret mapping.Secret, binary string) string {
+	if secret.Audit {
+		return "command " + Quote([]byte(binary)) + " get " + Quote([]byte(secret.Pass))
+	}
+	return "command pass show " + Quote([]byte(secret.Pass))
 }

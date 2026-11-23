@@ -136,6 +136,9 @@ func (a *app) mappingChecks() []check {
 		if secret.Scope == mapping.ScopeGlobal && secret.Env != "" && secret.IsEnabled() {
 			checks = append(checks, check{"!", "global scope", secret.Env + " exported to every child process"})
 		}
+		if secret.Audit {
+			checks = append(checks, check{"!", "audit", secret.Pass + ": pass show and gpg reads are not logged"})
+		}
 	}
 	return checks
 }
