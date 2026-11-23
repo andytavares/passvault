@@ -152,8 +152,53 @@ func assertCompleteRevision(t *testing.T, revision store.Revision, file string) 
 	if len(revision.Hash) != 40 || revision.Short == "" || revision.Subject == "" || revision.Time.IsZero() {
 		t.Fatalf("incomplete revision: %+v", revision)
 	}
-	if !slices.Contains(revision.Files, file) {
-		t.Fatalf("revision %s missing %s in Files %v", revision.Short, file, revision.Files)
+	if !slices.ContainsFunc(revision.Changes, func(change store.FileChange) bool { return change.Path == file }) {
+		t.Fatalf("revision %s missing %s in Changes %v", revision.Short, file, revision.Changes)
+	}
+}
+
+func historyChanges(t *testing.T, s gitStore, name string) []string {
+	t.Helper()
+	revisions, err := s.History(context.Background(), name, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var changes []string
+	for _, revision := range revisions {
+		changes = append(changes, revision.Change(name))
+	}
+	return changes
+}
+
+func TestHistoryChangeIsRemovedChangedAddedNewestFirst(t *testing.T) {
+	s := newGitStore(t)
+	s.insert("linear-api-key", "v1")
+	s.insert("linear-api-key", "v2")
+	if err := s.Remove(context.Background(), "linear-api-key"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := historyChanges(t, s, "linear-api-key")
+
+	want := []string{"removed", "changed", "added"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("changes = %v, want %v", got, want)
+	}
+}
+
+func TestHistoryChangeIsRolledBackForEntryRollbackCommit(t *testing.T) {
+	s := newGitStore(t)
+	s.insert("linear-api-key", "v1")
+	s.insert("linear-api-key", "v2")
+	if _, err := s.Rollback(context.Background(), "HEAD~1", "linear-api-key"); err != nil {
+		t.Fatal(err)
+	}
+
+	got := historyChanges(t, s, "linear-api-key")
+
+	want := []string{"rolled back", "changed", "added"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("changes = %v, want %v", got, want)
 	}
 }
 
