@@ -308,7 +308,7 @@ func TestRollbackRecordsOneEventPerAuditedRestoredOrRemovedEntry(t *testing.T) {
 	s.insert("aws", "new")
 	path := withRecorder(t, s.Store, "github", "aws")
 
-	if _, err := s.Rollback(context.Background(), head, ""); err != nil {
+	if _, err := s.Rollback(context.Background(), "HEAD~3", ""); err != nil {
 		t.Fatal(err)
 	}
 	events := readEvents(t, path)
@@ -318,7 +318,7 @@ func TestRollbackRecordsOneEventPerAuditedRestoredOrRemovedEntry(t *testing.T) {
 	got := []string{events[0].Entry + " " + string(events[0].Action) + " " + events[0].Detail,
 		events[1].Entry + " " + string(events[1].Action) + " " + events[1].Detail}
 	slices.Sort(got)
-	want := []string{"aws rollback to " + head, "github rollback to " + head}
+	want := []string{"aws rollback to " + head[:7], "github rollback to " + head[:7]}
 	if !slices.Equal(got, want) {
 		t.Fatalf("events = %v, want %v", got, want)
 	}

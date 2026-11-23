@@ -159,7 +159,7 @@ func (m Model) entryLine(index int, row syncer.StatusRow) string {
 	if m.mapping.IsAudited(row.Name) {
 		auditMark = m.auditMark()
 	}
-	label := fmt.Sprintf("%s %-25s %s  %s", cursorMark(index == m.cursor), row.Name, auditMark, m.glyph(row))
+	label := fmt.Sprintf("%s %-27s%s %s", cursorMark(index == m.cursor), row.Name, auditMark, m.glyph(row))
 	return label + " " + m.statusLabel(row.Kind, age(row.SyncedAt, m.deps.Now()))
 }
 

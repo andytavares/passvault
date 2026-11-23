@@ -53,7 +53,7 @@ func (a *app) recorder() *audit.Recorder {
 		Now:  a.now,
 		Audited: func(name string) bool {
 			m, err := mapping.Load(a.paths.Mapping())
-			return err == nil && m.IsAudited(name)
+			return (err == nil && m.IsAudited(name)) || audit.WasAudited(a.paths.AuditFlags(), name)
 		},
 	}
 }

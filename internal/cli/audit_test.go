@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -124,5 +125,45 @@ func TestEnvWithAuditedGlobalRecordsExport(t *testing.T) {
 	}
 	if got := evalInZsh(t, f.out.String(), "GITHUB_TOKEN"); got != "ghp-value" {
 		t.Fatalf("GITHUB_TOKEN = %q", got)
+	}
+}
+
+func TestRemoveAfterAuditedEntryLeftMappingRecordsDelete(t *testing.T) {
+	f := newCliFixture(t, "")
+	f.app.via = "tui"
+	f.writeMapping(t, auditedGithub)
+	f.env.Insert(t, "work/github", "ghp-value")
+	if _, err := f.app.loadMapping(); err != nil {
+		t.Fatal(err)
+	}
+	if err := mapping.RemoveSecret(f.env.Paths.Mapping(), "work/github"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.app.store().Remove(t.Context(), "work/github"); err != nil {
+		t.Fatal(err)
+	}
+	if got := auditActions(t, f); !slices.Equal(got, []audit.Action{audit.ActionAuditOn, audit.ActionDelete}) {
+		t.Fatalf("actions = %v, want [audit-on delete]", got)
+	}
+}
+
+func TestGetWithBrokenMappingStillRecordsUseOfAuditedEntry(t *testing.T) {
+	f := newCliFixture(t, "")
+	f.app.via = "get"
+	f.writeMapping(t, auditedGithub)
+	f.env.Insert(t, "work/github", "ghp-value")
+	if _, err := f.app.loadMapping(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(f.env.Paths.Mapping(), []byte("version = 1\n[[secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := f.run(f.app.getCommand(), "work/github"); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got := auditActions(t, f); !slices.Equal(got, []audit.Action{audit.ActionAuditOn, audit.ActionUse}) {
+		t.Fatalf("actions = %v, want [audit-on use]", got)
 	}
 }

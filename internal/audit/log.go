@@ -74,12 +74,12 @@ func Read(path string) ([]Event, error) {
 		return nil, err
 	}
 	var events []Event
-	for number, line := range lines {
+	for _, line := range lines {
 		var event Event
-		if err := json.Unmarshal(line, &event); err != nil {
-			return nil, fmt.Errorf("line %d: %w", number+1, err)
+		// A torn line must not hide the rest of the log; Verify reports it.
+		if json.Unmarshal(line, &event) == nil {
+			events = append(events, event)
 		}
-		events = append(events, event)
 	}
 	return events, nil
 }

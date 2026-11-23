@@ -290,3 +290,29 @@ func TestSyncFlagsRecordsAuditOffForRemovedName(t *testing.T) {
 		t.Fatalf("events = %+v, want audit-off for github last", events)
 	}
 }
+
+func TestReadSkipsLineThatDoesNotParse(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "audit.jsonl")
+	content := `{"entry":"github","action":"use"}` + "\n" + `{"entry":"git` + "\n" + `{"entry":"aws","action":"view"}` + "\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	events, err := Read(path)
+	if err != nil || len(events) != 2 || events[0].Entry != "github" || events[1].Entry != "aws" {
+		t.Fatalf("Read = %+v, %v; want github and aws", events, err)
+	}
+}
+
+func TestWasAuditedReadsSavedFlags(t *testing.T) {
+	recorder := newRecorder(t)
+	flags := filepath.Join(filepath.Dir(recorder.Path), "audit-flags.json")
+	if WasAudited(flags, "github") {
+		t.Fatal("WasAudited before any save = true")
+	}
+	if err := SyncFlags(recorder, flags, []string{"github"}); err != nil {
+		t.Fatal(err)
+	}
+	if !WasAudited(flags, "github") || WasAudited(flags, "aws") {
+		t.Fatal("WasAudited does not match the saved names")
+	}
+}

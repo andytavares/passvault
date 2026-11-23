@@ -67,3 +67,10 @@ func saveFlags(path string, names []string) error {
 	}
 	return os.WriteFile(path, append(data, '\n'), 0o600)
 }
+
+// WasAudited reports whether name was audited at the last SyncFlags. It keeps
+// an entry audited while it leaves the mapping, and when the mapping is broken.
+func WasAudited(flagsPath, name string) bool {
+	names, err := loadFlags(flagsPath)
+	return err == nil && slices.Contains(names, name)
+}

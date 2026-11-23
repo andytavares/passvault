@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -64,11 +65,15 @@ func TestVaultMarksAuditedEntryAndShowsAuditRow(t *testing.T) {
 	f.env.Insert(t, "alpha", "alpha-value")
 	f.env.Insert(t, "beta", "beta-value")
 	view := ansi.Strip(viewText(f.loadModel(t)))
-	if line := lineWith(view, "▸ alpha"); !strings.Contains(line, "alpha                     ◉  ◐") {
-		t.Errorf("alpha row lacks the audit mark: %q\n%s", line, view)
+	alpha, beta := lineWith(view, "▸ alpha"), lineWith(view, "  beta")
+	if !strings.Contains(alpha, "◉ ◐") {
+		t.Errorf("alpha row lacks the audit mark: %q\n%s", alpha, view)
 	}
-	if line := lineWith(view, "  beta"); strings.Contains(line, "◉") {
-		t.Errorf("beta is not audited but shows ◉: %q", line)
+	if strings.Contains(beta, "◉") {
+		t.Errorf("beta is not audited but shows ◉: %q", beta)
+	}
+	if glyphColumn(alpha) != glyphColumn(beta) {
+		t.Errorf("sync glyphs are not aligned:\n%q\n%q", alpha, beta)
 	}
 	if !strings.Contains(view, "Audit      on · reveal and copy are logged") {
 		t.Errorf("detail pane lacks the Audit row:\n%s", view)
@@ -227,4 +232,9 @@ func TestAuditViewMovesCursorWithJAndK(t *testing.T) {
 	if view = ansi.Strip(viewText(m)); !strings.Contains(view, "│ Entry   alpha") {
 		t.Fatalf("k should select alpha again:\n%s", view)
 	}
+}
+
+// glyphColumn is the rune index of the sync glyph in a Vault row.
+func glyphColumn(line string) int {
+	return slices.Index([]rune(line), '◐')
 }
