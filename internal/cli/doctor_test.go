@@ -94,3 +94,14 @@ func TestDoctorSkipsGlobalWarningForDisabledEntry(t *testing.T) {
 		t.Fatalf("disabled entry warned:\n%s", f.out.String())
 	}
 }
+
+func TestDoctorWarnsThatAuditedEntryMissesPassShowReads(t *testing.T) {
+	f := healthyEnv(t)
+	f.writeMapping(t, mapping.Secret{Pass: "work/token", Ref: "op://Private/T/token", Env: "TOKEN", Audit: true})
+	if err := f.run(f.app.doctorCommand()); err != nil {
+		t.Fatalf("doctor: %v\n%s", err, f.out.String())
+	}
+	if !strings.Contains(f.out.String(), "work/token: pass show and gpg reads are not logged") {
+		t.Fatalf("output missing audit warning:\n%s", f.out.String())
+	}
+}

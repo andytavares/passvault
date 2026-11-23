@@ -32,6 +32,7 @@ sequenceDiagram
 |---|---|---|---|
 | `~/.config/pvault/mapping.toml` | you, `mapping init/add`, setup | which 1Password fields go where | no, references only |
 | `~/.local/state/pvault/state.json` | sync | per entry: last write time and sync tag | no |
+| `~/.local/state/pvault/audit.jsonl` | any pvault read or write of an audited entry | per event: time, entry, action, user, host, caller processes, hash of the previous line | no |
 | `~/.local/state/pvault/manifest.json` | setup | packages installed, key created, files edited, source clone, schema version | no |
 | `~/.password-store/**.gpg` | pass | the values, encrypted to your GPG key | yes, encrypted |
 | `~/.zshrc` (managed block) | setup | one line that evaluates `pvault env --zsh` | no |
@@ -81,6 +82,10 @@ What pvault cannot protect:
   push the store's git repo anywhere; if you add a remote yourself, you are
   publishing ciphertext and entry names.
 - **`pass show -c`** leaves the value on the clipboard for 45 seconds.
+- **The audit log** covers pvault paths only. It does not log `pass show`, `gpg -d`
+  or reads of the `pass` git repo. The same user can edit the log.
+  `pvault audit --verify` finds a changed or removed line in the middle, but not
+  lines cut from the end.
 
 ## Versioning and migrations
 

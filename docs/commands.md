@@ -11,6 +11,8 @@ a command lists otherwise.
 | [`status`](#status) | list entries and last sync time |
 | [`env`](#env) | print the zsh exports and wrappers |
 | [`run`](#run) | run one command with secrets |
+| [`get`](#get) | print one entry's value |
+| [`audit`](#audit) | show the audit log |
 | [`history`](#history) | list store commits and sync tags |
 | [`rollback`](#rollback) | restore the store or one entry |
 | [`mapping`](#mapping) | create, locate, validate and add to the mapping file |
@@ -118,6 +120,44 @@ mapped entry that has `env`, whatever its scope. `CMD` inherits the terminal.
 Exits with `CMD`'s exit code. Fails before starting `CMD` when an entry is unknown,
 unreadable, or contains a NUL byte.
 
+## get
+
+```
+pvault get NAME
+```
+
+Prints the exact bytes of one pass entry to stdout and nothing else, so
+`SECRET=$(pvault get NAME)` works. For an audited entry it first writes a `use`
+event. If that write fails, it prints no value and exits `1`.
+
+## audit
+
+```
+pvault audit [NAME] [--since DURATION] [--json] [--verify]
+```
+
+Lists audit events, newest first:
+
+```
+TIME  ENTRY  ACTION  VIA  USER  WHAT
+```
+
+| Action | Meaning |
+|---|---|
+| `use` | `pvault get` or `pvault run` read the value |
+| `export` | a new shell exported a global entry |
+| `compare` | sync or check read the value to compare it |
+| `view` | the value was shown on screen |
+| `copy` | the value was copied to the clipboard |
+| `write` | sync or the TUI wrote a new value |
+| `delete` | the entry was deleted |
+| `rollback` | a rollback restored the entry |
+| `audit-on` | the entry got `audit = true` |
+| `audit-off` | the entry lost `audit = true` |
+
+`--verify` checks the hash chain. It prints `OK, N events, chain intact`, or
+`line N: chain broken` and exits `1`.
+
 ## history
 
 ```
@@ -191,7 +231,7 @@ Pulls the source clone, rebuilds `~/.local/bin/pvault`, upgrades the brew tools
 ## uninstall
 
 ```
-pvault uninstall [--dry-run] [--yes] [--keep-config] [--purge-key] [--purge-vault]
+pvault uninstall [--dry-run] [--yes] [--keep-config] [--purge-key] [--purge-vault] [--purge-audit]
 ```
 
 Prints the remove/keep plan and asks before acting. Flags in
