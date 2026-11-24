@@ -153,7 +153,7 @@ func (e *Env) SetOp(t *testing.T, ref, value string) {
 	writeFile(t, filepath.Join(e.OpFixtures, FixtureKey(ref)), value)
 }
 
-// SetOpSignedIn controls whether the fake `op whoami` succeeds.
+// SetOpSignedIn controls whether the fake `op signin` succeeds.
 func (e *Env) SetOpSignedIn(t *testing.T, signedIn bool) {
 	t.Helper()
 	marker := filepath.Join(e.Root, "op-signed-in")
@@ -246,8 +246,8 @@ const fakeOp = `#!/bin/sh
 root="$PVAULT_FAKE_ROOT"
 echo "$*" >> "$root/op.log"
 case "$1" in
-  whoami)
-    [ -f "$root/op-signed-in" ] && { echo "URL: fake"; exit 0; }
+  signin)
+    [ -f "$root/op-signed-in" ] && exit 0
     echo "[ERROR] account is not signed in" >&2; exit 1 ;;
   read)
     shift

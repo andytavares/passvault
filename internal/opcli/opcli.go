@@ -53,8 +53,8 @@ func (c *Client) Read(ctx context.Context, ref string) ([]byte, error) {
 
 // SignedIn reports whether op can reach a 1Password account.
 func (c *Client) SignedIn(ctx context.Context) error {
-	if _, err := c.Runner.Run(ctx, c.opCmd("whoami")); err != nil {
-		return fmt.Errorf("op whoami: %w\nOpen 1Password > Settings > Developer > Integrate with 1Password CLI, then retry", err)
+	if _, err := c.Runner.Run(ctx, c.opCmd("signin")); err != nil {
+		return fmt.Errorf("op signin: %w\nOpen 1Password > Settings > Developer > Integrate with 1Password CLI, then retry", err)
 	}
 	return nil
 }

@@ -5,7 +5,7 @@ Start with `pvault doctor`. It checks most of what can go wrong.
 | Message | Cause | Fix |
 |---|---|---|
 | `no mapping file at …; run pvault mapping init` | no mapping yet | `pvault mapping init`, then add entries |
-| `op whoami: … Open 1Password > Settings > Developer > Integrate with 1Password CLI, then retry` | op cannot reach the app | turn on that setting, unlock 1Password, retry. With several accounts, set `op_account` in the mapping |
+| `op signin: … Open 1Password > Settings > Developer > Integrate with 1Password CLI, then retry` | op cannot reach the app | turn on that setting, unlock 1Password, retry. With several accounts, set `op_account` in the mapping |
 | `✕ NAME  failed: op read op://…: …` | the reference is wrong or you lack access | copy the reference again from 1Password (**Copy Secret Reference**). Names with characters other than letters, digits, `-`, `_`, `.` and spaces need the item ID instead |
 | `pass store has uncommitted changes; commit or discard them (pass git status)` | someone edited the store outside pass's git | `pass git status`, then `pass git commit -am "…"` or `pass git checkout -- .` |
 | `store is dirty; commit or discard changes first` | same, during rollback | same |

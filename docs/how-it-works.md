@@ -11,7 +11,7 @@ sequenceDiagram
   participant git as store git
 
   You->>pvault: pvault sync
-  pvault->>op: op whoami
+  pvault->>op: op signin
   loop each [[secret]]
     pvault->>op: op read -n op://…
     pvault->>pass: pass show NAME (if it exists)

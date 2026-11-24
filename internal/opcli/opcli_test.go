@@ -69,6 +69,20 @@ func TestSignedIn(t *testing.T) {
 	}
 }
 
+// With app integration, `op whoami` fails until a command asks the app to
+// authorize, so the check must run `op signin`.
+func TestSignedInAsksTheAppToSignIn(t *testing.T) {
+	env, client := newClient(t)
+	env.SetOpSignedIn(t, true)
+	if err := client.SignedIn(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	log := env.Log(t, "op")
+	if len(log) != 1 || !strings.HasPrefix(log[0], "signin") {
+		t.Fatalf("op log = %q", log)
+	}
+}
+
 func TestSignedOutErrorHasHint(t *testing.T) {
 	env, client := newClient(t)
 	env.SetOpSignedIn(t, false)

@@ -51,7 +51,7 @@ needed, so running setup again is safe. Each step prints one line:
 | `store git` | `~/.password-store/.git` | `pass git init` (history and rollback need it) |
 | `mapping.toml` | the mapping file | writes a commented example, mode `0600` |
 | `zshrc block` | the managed block in `~/.zshrc` | adds the block below; warns about lines elsewhere in `~/.zshrc` that call `pass` |
-| `1password` | `op whoami` | none; warns when op is not signed in |
+| `1password` | `op signin` | none; warns when op is not signed in |
 
 The `~/.zshrc` block:
 
