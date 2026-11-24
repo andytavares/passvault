@@ -291,7 +291,7 @@ func (in *Installer) opStep() Step {
 	return Step{
 		Name: "1password",
 		Check: func(ctx context.Context) (bool, string, error) {
-			_, err := in.Runner.Run(ctx, execx.Cmd{Name: "op", Args: []string{"whoami"}})
+			_, err := in.Runner.Run(ctx, execx.Cmd{Name: "op", Args: []string{"signin"}})
 			if err != nil {
 				in.Out.Report(Warning, "1password", "Enable 1Password > Settings > Developer > Integrate with 1Password CLI")
 			}
