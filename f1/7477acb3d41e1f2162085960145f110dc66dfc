@@ -1,0 +1,34 @@
+docs/troubleshooting.md
+  s_6f6108fe7ca4da::t_16edc0264bc534 8
+docs/how-it-works.md
+  s_6f6108fe7ca4da::t_16edc0264bc534 14
+internal/opcli/opcli_test.go
+  s_6f6108fe7ca4da::t_c09c03d8f9343d 72-85
+docs/design.html
+  s_6f6108fe7ca4da::t_16edc0264bc534 136
+docs/install.md
+  s_6f6108fe7ca4da::t_16edc0264bc534 54
+internal/opcli/opcli.go
+  s_6f6108fe7ca4da::t_16edc0264bc534 56-57
+internal/testenv/testenv.go
+  s_6f6108fe7ca4da::t_16edc0264bc534 156,249
+  s_6f6108fe7ca4da::t_2fbde51125b084 250
+internal/setup/steps.go
+  s_6f6108fe7ca4da::t_16edc0264bc534 294
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f17477acb3d41e1f2162085960145f110dc66dfc",
+  "prompts": {},
+  "sessions": {
+    "s_6f6108fe7ca4da": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "535fd9b9-c174-44b5-bd60-a9c25de60de4",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Andrew <andrew.tavaes87@gmail.com>"
+    }
+  }
+}
